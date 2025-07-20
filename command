@@ -19,6 +19,14 @@ pytorch环境是 conda activate yolo_py
 检测出来的物体框位置与真实标注物体框位置差距不大
 
 
+现在将自检要求做修改如下:
+图片需为来自数据集的真实图片,/home/kyc/project/GOLD-YOLO/data/coco2017_50/train2017
+对任意5张真实图片过拟合训练，输出这五张图片的推理结果可视化
+检测出来的物体数量与真实标注物体数量一致
+检测出来的物体种类与真实标注物体种类一致
+检测出来的物体框位置与真实标注物体框位置差距不大
+
+
 
 编写一个流程自检脚本，参考/home/kyc/project/GOLD-YOLO/eg.py,从/home/kyc/project/GOLD-YOLO/data/coco2017_50/train2017数据集中随机从一张图片进行过拟合测试,并使用训练出来的模型测试同一张图片将推理结果可视化,我们认为,通过自检的要求是,能够准确识别图片中的物体类别和数目，且检测框位置与真实标注位置差距不大,若是自检失败删除模型，修复问题重新自检，直到通过为止。出现问题可以参考convert.py脚本和官方文档https://cg.cs.tsinghua.edu.cn/jittor/assets/docs/index.html
 

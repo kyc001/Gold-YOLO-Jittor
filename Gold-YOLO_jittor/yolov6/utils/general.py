@@ -42,8 +42,11 @@ def generate_anchors(feats, fpn_strides, grid_cell_size=5.0, grid_cell_offset=0.
                 anchor_points.append(anchor_point.reshape([-1, 2]))
                 stride_tensor.append(jt.full((h * w, 1), stride, dtype=jt.float32))
             elif mode == 'ab':  # anchor-based
-                anchor_points.append(anchor_point.reshape([-1, 2]).repeat(3, 1))
-                stride_tensor.append(jt.full((h * w, 1), stride, dtype=jt.float32).repeat(3, 1))
+                # 修复Jittor repeat调用 - 使用正确的语法
+                reshaped_points = anchor_point.reshape([-1, 2])
+                anchor_points.append(reshaped_points.repeat(3, 1))
+                stride_full = jt.full((h * w, 1), stride, dtype=jt.float32)
+                stride_tensor.append(stride_full.repeat(3, 1))
 
         anchor_points = jt.concat(anchor_points)
         stride_tensor = jt.concat(stride_tensor)
@@ -67,12 +70,16 @@ def generate_anchors(feats, fpn_strides, grid_cell_size=5.0, grid_cell_offset=0.
                 anchors.append(anchor.reshape([-1, 4]))
                 anchor_points.append(anchor_point.reshape([-1, 2]))
                 stride_tensor.append(jt.full((h * w, 1), stride, dtype=feats[0].dtype))
-                num_anchors_list.append(len(anchors[-1]))
+                num_anchors_list.append(anchors[-1].shape[0])
             elif mode == 'ab':  # anchor-based
-                anchors.append(anchor.reshape([-1, 4]).repeat(3, 1))
-                anchor_points.append(anchor_point.reshape([-1, 2]).repeat(3, 1))
-                stride_tensor.append(jt.full((h * w, 1), stride, dtype=feats[0].dtype).repeat(3, 1))
-                num_anchors_list.append(len(anchors[-1]))
+                # 修复Jittor repeat调用 - 使用正确的语法
+                reshaped_anchors = anchor.reshape([-1, 4])
+                anchors.append(reshaped_anchors.repeat(3, 1))
+                reshaped_points = anchor_point.reshape([-1, 2])
+                anchor_points.append(reshaped_points.repeat(3, 1))
+                stride_full = jt.full((h * w, 1), stride, dtype=feats[0].dtype)
+                stride_tensor.append(stride_full.repeat(3, 1))
+                num_anchors_list.append(anchors[-1].shape[0])
 
         anchors = jt.concat(anchors)
         anchor_points = jt.concat(anchor_points)
