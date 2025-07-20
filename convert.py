@@ -1,42 +1,42 @@
 from jittor.utils.pytorch_converter import convert
 
 pytorch_code="""
-from torch import nn
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
-class AlexNet(nn.Module):
+# 简化的损失函数
+class SimpleLoss(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.bce_loss = nn.BCELoss()
+        self.mse_loss = nn.MSELoss()
 
-    def __init__(self, num_classes=1000):
-        super(AlexNet, self).__init__()
-        self.features = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=2),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.Conv2d(64, 192, kernel_size=5, padding=2),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.Conv2d(192, 384, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(384, 256, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(256, 256, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=3, stride=2),
-        )
-        self.classifier = nn.Sequential(
-            nn.Dropout(),
-            nn.Linear(256 * 6 * 6, 4096),
-            nn.ReLU(inplace=True),
-            nn.Dropout(),
-            nn.Linear(4096, 4096),
-            nn.ReLU(inplace=True),
-            nn.Linear(4096, num_classes),
-        )
+    def forward(self, pred_scores, pred_distri, targets):
+        # 分类损失
+        batch_size = pred_scores.shape[0]
+        num_anchors = pred_scores.shape[1]
+        num_classes = pred_scores.shape[2]
 
-    def forward(self, x):
-        x = self.features(x)
-        x = torch.flatten(x, 1)
-        x = self.classifier(x)
-        return x
+        # 创建目标标签
+        target_labels = torch.zeros_like(pred_scores)
+
+        # 简单分配策略
+        if 'cls' in targets:
+            gt_classes = targets['cls'][0]
+            for i, cls_id in enumerate(gt_classes):
+                start_idx = i * 1000
+                end_idx = min(start_idx + 1000, num_anchors)
+                target_labels[0, start_idx:end_idx, cls_id] = 1.0
+
+        # 分类损失
+        cls_loss = self.bce_loss(pred_scores, target_labels)
+
+        # 回归损失（简化）
+        reg_loss = self.mse_loss(pred_distri, torch.zeros_like(pred_distri))
+
+        total_loss = cls_loss + 0.1 * reg_loss
+        return total_loss
 """
 
 jittor_code = convert(pytorch_code)
