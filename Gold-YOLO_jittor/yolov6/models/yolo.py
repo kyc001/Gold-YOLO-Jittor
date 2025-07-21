@@ -80,7 +80,10 @@ class Model(nn.Module):
 def build_network(config, channels, num_classes, num_layers, fuse_ab=False, distill_ns=False):
     """构建完整网络 - 完整实现，与PyTorch版本对齐"""
     # 导入完整的backbone和neck组件
-    from yolov6.layers.common import *
+    from yolov6.layers.common import (
+        Conv, RepVGGBlock, RepBlock, BepC3, SimSPPF, SPPF,
+        EfficientRep, RepPAN, EffiDeHead, Detect
+    )
 
     # 获取配置参数
     depth_mul = getattr(config.model, 'depth_multiple', 1.0)

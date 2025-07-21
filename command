@@ -28,6 +28,11 @@ pytorch环境是 conda activate yolo_py
 
 
 
+现在看到模型已经能够正确识别位置信息,但是类别标签好像错了,检查一些类别索引
+
+现在的问题是，由于图片尺寸不一，在统一拉伸到统一尺寸后，绘制出来的标注框的位置与真实物体的位置会有横向或纵向的偏移
+
+
 编写一个流程自检脚本，参考/home/kyc/project/GOLD-YOLO/eg.py,从/home/kyc/project/GOLD-YOLO/data/coco2017_50/train2017数据集中随机从一张图片进行过拟合测试,并使用训练出来的模型测试同一张图片将推理结果可视化,我们认为,通过自检的要求是,能够准确识别图片中的物体类别和数目，且检测框位置与真实标注位置差距不大,若是自检失败删除模型，修复问题重新自检，直到通过为止。出现问题可以参考convert.py脚本和官方文档https://cg.cs.tsinghua.edu.cn/jittor/assets/docs/index.html
 
 
@@ -37,3 +42,19 @@ pytorch环境是 conda activate yolo_py
 检测出来的物体种类与真实标注物体种类一致
 检测出来的物体框位置与真实标注物体框位置差距不大
 
+
+
+
+新芽第二阶段（培育期）重点培育和考察动手编程的能力，请大家从自己第一阶段汇报主题的相关文献中，选择一篇尚未有 Jittor 开源实现的论文用 Jittor 框架（https://github.com/Jittor/jittor）进行实现并开源在个人  Github 上。第二轮代码面试的 Jittor 代码开源链接，请将环境配置、数据准备脚本、训练脚本、测试脚本、与 PyTorch 实现对齐的实验 Log、性能 Log 都放在 README 中。如果计算资源有限，用少量数据的训练效果和 PyTorch 版本的结果对齐。请将训练过程 Log、Loss 曲线，结果、可视化等对齐情况进行记录。
+
+你必须始终记住，要用完整"满血"的small模型进行训练，而不是你遇到问题自作主张进行简化，遇到问题一定要深入修复，确保模型完全还原pytorch的small版本
+
+
+计划如下：使用coco2017val(约几千张图片)作为训练集，评估两种版本的性能对比，分析一下训练时间大概需要多久
+
+
+
+jittor运行环境是conda activate jt
+pytorch运行环境是conda activate yolo_py
+jittor版本损失数值太小了，是否有异常
+整理数据集，提取出训练集和测试集，最后需要统一在测试集上评估性能

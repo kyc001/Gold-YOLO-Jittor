@@ -1,0 +1,47 @@
+# Gold-YOLO小规模训练配置
+# 用于快速验证和测试
+
+# 模型配置
+model: 'configs/model/yolov6s.yaml'
+nc: 80  # 类别数量 (COCO)
+imgsz: 640  # 输入图像尺寸
+
+# 数据配置
+train_data: 'data/coco2017_50/annotations/instances_train2017.json'
+val_data: null  # 小规模训练不使用验证集
+data_root: 'data/coco2017_50/images'
+
+# 训练配置
+epochs: 50
+batch_size: 4
+lr0: 0.001
+weight_decay: 0.0005
+warmup_epochs: 3
+workers: 2
+
+# 输出配置
+save_dir: 'runs/train'
+project: 'gold_yolo_small'
+
+# 数据增强配置
+hyp:
+  hsv_h: 0.015
+  hsv_s: 0.7
+  hsv_v: 0.4
+  degrees: 0.0
+  translate: 0.1
+  scale: 0.5
+  shear: 0.0
+  perspective: 0.0
+  flipud: 0.0
+  fliplr: 0.5
+  mosaic: 1.0
+  mixup: 0.0
+
+# 损失函数配置
+loss:
+  cls_pw: 1.0
+  obj_pw: 1.0
+  iou_pw: 2.5
+  anchor_t: 4.0
+  fl_gamma: 0.0

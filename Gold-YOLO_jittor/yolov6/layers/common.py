@@ -9,6 +9,15 @@ from jittor import nn
 import math
 
 
+def autopad(k, p=None, d=1):  # kernel, padding, dilation
+    """Auto-pad to 'same' shape outputs"""
+    if d > 1:
+        k = d * (k - 1) + 1 if isinstance(k, int) else [d * (x - 1) + 1 for x in k]  # actual kernel-size
+    if p is None:
+        p = k // 2 if isinstance(k, int) else [x // 2 for x in k]  # auto-pad
+    return p
+
+
 class Conv(nn.Module):
     """Standard convolution with args(ch_in, ch_out, kernel, stride, padding, groups, dilation, activation)"""
     
@@ -206,3 +215,84 @@ def initialize_weights(model):
             m.momentum = 0.03
         elif t in [nn.Hardswish, nn.LeakyReLU, nn.ReLU, nn.ReLU6, nn.SiLU]:
             m.inplace = True
+
+
+class RepVGGBlock(nn.Module):
+    """RepVGGBlock - 与PyTorch版本严格对齐"""
+
+    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1,
+                 dilation=1, groups=1, padding_mode='zeros', deploy=False, use_se=False):
+        super(RepVGGBlock, self).__init__()
+
+        self.deploy = deploy
+        self.groups = groups
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+
+        assert kernel_size == 3
+        assert padding == 1
+
+        padding_11 = padding - kernel_size // 2
+
+        self.nonlinearity = nn.ReLU()
+
+        if deploy:
+            self.rbr_reparam = nn.Conv2d(in_channels=in_channels, out_channels=out_channels,
+                                          kernel_size=kernel_size, stride=stride,
+                                          padding=padding, dilation=dilation, groups=groups, bias=True)
+        else:
+            self.rbr_identity = nn.BatchNorm2d(num_features=in_channels) if out_channels == in_channels and stride == 1 else None
+            self.rbr_dense = self.conv_bn(in_channels=in_channels, out_channels=out_channels,
+                                        kernel_size=kernel_size, stride=stride, padding=padding, groups=groups)
+            self.rbr_1x1 = self.conv_bn(in_channels=in_channels, out_channels=out_channels,
+                                      kernel_size=1, stride=stride, padding=padding_11, groups=groups)
+
+    def conv_bn(self, in_channels, out_channels, kernel_size, stride, padding, groups=1):
+        """创建conv+bn层"""
+        result = nn.Sequential()
+        result.add_module('conv', nn.Conv2d(in_channels=in_channels, out_channels=out_channels,
+                                             kernel_size=kernel_size, stride=stride, padding=padding,
+                                             groups=groups, bias=False))
+        result.add_module('bn', nn.BatchNorm2d(num_features=out_channels))
+        return result
+
+    def execute(self, inputs):
+        if hasattr(self, 'rbr_reparam'):
+            return self.nonlinearity(self.rbr_reparam(inputs))
+
+        if self.rbr_identity is None:
+            id_out = 0
+        else:
+            id_out = self.rbr_identity(inputs)
+
+        return self.nonlinearity(self.rbr_dense(inputs) + self.rbr_1x1(inputs) + id_out)
+
+
+class RepBlock(nn.Module):
+    """RepBlock - 与PyTorch版本严格对齐"""
+
+    def __init__(self, in_channels, out_channels, n=1, block=RepVGGBlock):
+        super(RepBlock, self).__init__()
+
+        self.conv1 = block(in_channels, out_channels)
+        self.block = nn.Sequential(*(block(out_channels, out_channels) for _ in range(n - 1))) if n > 1 else None
+
+    def execute(self, x):
+        x = self.conv1(x)
+        if self.block is not None:
+            x = self.block(x)
+        return x
+
+
+class SimConv(nn.Module):
+    """Simple Convolution"""
+
+    def __init__(self, in_channels, out_channels, kernel_size, stride, groups=1, bias=False):
+        super(SimConv, self).__init__()
+        padding = kernel_size // 2
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, groups=groups, bias=bias)
+        self.bn = nn.BatchNorm2d(out_channels)
+        self.act = nn.SiLU()
+
+    def execute(self, x):
+        return self.act(self.bn(self.conv(x)))
