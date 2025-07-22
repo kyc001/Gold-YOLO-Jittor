@@ -58,3 +58,21 @@ jittor运行环境是conda activate jt
 pytorch运行环境是conda activate yolo_py
 jittor版本损失数值太小了，是否有异常
 整理数据集，提取出训练集和测试集，最后需要统一在测试集上评估性能
+
+
+conda activate jt && python full_official_small.py --num-images 1000 --batch-size 4 --epochs 50 --name "validated_full_pytorch_small"
+
+这样吧，先conda activate yolo_py,用pytorch small版本进行完整训练，因为pytorch是官方实现不会有错，成功以后再将jittor与pytorch版本对齐
+
+
+现在我的问题是，在这个实验里，我们的目的是训练出jittor和pytorch版本做对比，且计算资源有限，如果只用不到一千张coco作为训练集学习80类目标会不会效果很差？有没有其他更合适的数据集？比如单一识别人像？或者说换成pascalVOC数据集，只有20类目标？
+
+
+有几个问题，为什么pytorch版本参数量和jittor版差别这么多
+为什么损失后面几乎不下降   轮次 10/50: 验证损失 = 1.000000
+   轮次 11/50: 训练损失 = 1.389221
+   轮次 16/50: 训练损失 = 1.389208
+   轮次 20/50: 验证损失 = 1.000000
+   轮次 21/50: 训练损失 = 1.389172
+
+改为nano版本吧，先将jittor版本换为nano版本实现，再比较pytorch版本和jittor版本 nano版本参数量差异
