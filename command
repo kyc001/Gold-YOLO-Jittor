@@ -76,3 +76,98 @@ conda activate jt && python full_official_small.py --num-images 1000 --batch-siz
    轮次 21/50: 训练损失 = 1.389172
 
 改为nano版本吧，先将jittor版本换为nano版本实现，再比较pytorch版本和jittor版本 nano版本参数量差异
+
+首先不希望你创建新脚本，而是在旧脚本上调整修改，因为要尽量保证结构对齐，此外，迁移代码可以借助/home/kyc/project/GOLD-YOLO/convert.py
+
+应该说jittor与pytorch版本完全对齐，包括项目文件结构,再分别对比n，s,m，l模型参数量是否一致
+
+jittor运行环境是conda activate jt
+pytorch运行环境是conda activate yolo_py
+对齐文件结构
+对比参数量，检查jittor版模型是否有问题。
+
+
+继续深入修复差距，对齐参数量
+
+N/S版本略小的原因：
+
+SimpleRepPAN比PyTorch版本的RepPAN稍微简单
+可能还有一些细节差异需要进一步优化
+L版本偏大的原因：
+
+L版本的CSPBepBackbone参数量较大
+可能需要进一步优化CSP结构
+
+
+现在有一张rtx4060 8gb,先使用pytorch版本Gold-YOLO-n进行训练，数据在/home/kyc/project/GOLD-YOLO/data/voc2012_subset内 运行环境为conda activate yolo_py
+
+从推理结果以及可视化结果看到，模型预测的类别完全错误，可以认为模型根本没有正确学习到物体特征，分析这一原因，从各个方面做出改进
+
+ 153/199    0.4358         0    0.9682:  10%|▉         | 6/61 [00:00<00:07,  7.82it/s]            /home/kyc/project/GOLD-YOLO/Gold-YOLO_pytorch/yolov6/core/engine.py:146: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with amp.autocast(enabled=self.device != 'cpu'):
+/home/kyc/project/GOLD-YOLO/Gold-YOLO_pytorch/yolov6/models/losses/loss.py:216: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast(enabled=False):
+
+
+使用满血版jittor gold-yolo-nano版本进行训练！！！！
+修复这些问题
+模型架构不匹配 - 参数量差异12.95% (4.89M vs 5.62M)
+输出格式错误 - 模型返回list而非tensor
+损失函数简陋 - 只是简单的MSE，没有真正的YOLO损失
+数据处理不完整 - 缺少数据增强、标签处理等
+训练流程简化 - 缺少验证、学习率调度等
+与pytorch版本对齐！！！！千万不要擅自简化！！！
+
+注意到当前的训练脚本中有很多简化的部分，为了实验一致性，请严格与pytorch版使用的训练脚本深入对齐
+此外,训练的模型架构中各处细节也应严格对照pytorch实现，不应简化省略！！深入修复。
+不过也应该避免参数量超出pytorch版本太多，相差巨大！
+
+
+1.梯度警告未完全深入修复，未完全消除
+2.训练数据和pytorch版一样,使用的是voc的子集data/voc2012_subset,有九百多张图片
+
+
+d.reg_preds.1.weight,706afee00)[12,64,1,1,]
+[w 0724 00:16:55.240621 84 grad.cc:81] grads[320] 'head.reg_preds.1.bias' doesn't have gradient. It will be set to zero: Var(3913:1:1:1:i0:o0:s1:n1:g1,float32,head.reg_preds.1.bias,706affa00)[12,]
+[w 0724 00:16:55.240626 84 grad.cc:81] grads[321] 'head.reg_preds.2.weight' doesn't have gradient. It will be set to zero: Var(4087:1:1:1:i0:o0:s1:n1:g1,float32,head.reg_preds.2.weight,706efd000)[12,128,1,1,]
+[w 0724 00:16:55.240639 84 grad.cc:81] grads[322] 'head.reg_preds.2.bias' doesn't have gradient. It will be set to zero: Var(4106:1:1:1:i0:o0:s1:n1:g1,float32,head.reg_preds.2.bias,705941600)[12,]
+
+Epoch 1/200:   0%|                                 | 0/5 [00:01<?, ?it/s, loss=60.6228, lr=0.010000]
+Epoch 1/200:  20%|█████                    | 1/5 [00:01<00:06,  1.59s/it, loss=60.6228, lr=0.010000]🔍 Gold-YOLO EfficientRep.execute被调用，输入形状: [16,3,640,640,]
+  stem输出: [16,16,320,320,]
+
+Epoch 1/200:  20%|█████                    | 1/5 [00:01<00:06,  1.59s/it, loss=59.6419, lr=0.010000]
+Epoch 1/200:  40%|██████████               | 2/5 [00:01<00:02,  1.35it/s, loss=59.6419, lr=0.010000]🔍 Gold-YOLO EfficientRep.execute被调用，输入形状: [16,3,640,640,]
+  stem输出: [16,16,320,320,]
+
+Epoch 1/200:  40%|██████████               | 2/5 [00:01<00:02,  1.35it/s, loss=61.1383, lr=0.010000]🔍 Gold-YOLO EfficientRep.execute被调用，输入形状: [16,3,640,640,]
+  stem输出: [16,16,320,320,]
+
+Epoch 1/200:  40%|██████████               | 2/5 [00:01<00:02,  1.35it/s, loss=60.6189, lr=0.010000]
+Epoch 1/200:  80%|████████████████████     | 4/5 [00:01<00:00,  2.89it/s, loss=60.6189, lr=0.010000]🔍 Gold-YOLO EfficientRep.execute被调用，输入形状: [16,3,640,640,]
+  stem输出: [16,16,320,320,]
+
+Epoch 1/200:  80%|████████████████████     | 4/5 [00:02<00:00,  2.89it/s, loss=60.6314, lr=0.010000]
+Epoch 1/200: 100%|█████████████████████████| 5/5 [00:02<00:00,  3.56it/s, loss=60.6314, lr=0.010000]
+Epoch 1/200: 100%|█████████████████████████| 5/5 [00:02<00:00,  2.39it/s, loss=60.6314, lr=0.010000]
+Warning: Failed to save checkpoint: can't pickle module objects
+Warning: Failed to save best model: can't pickle module objects
+Epoch 1/200: train_loss=60.5307, lr=0.010000, time=2.1s
+Training with 10 images, 5 batches per epoch
+
+Epoch 2/200:   0%|                                                            | 0/5 [00:00<?, ?it/s]🔍 Gold-YOLO EfficientRep.execute被调用，输入形状: [16,3,640,640,]
+  stem输出: [16,16,320,320,]
+
+Epoch 2/200:   0%|                                 | 0/5 [00:00<?, ?it/s, loss=61.7905, lr=0.010000]
+Epoch 2/200:  20%|█████                    | 1/5 [00:00<00:00,  7.20it/s, loss=61.7905, lr=0.010000]🔍 Gold-YOLO EfficientRep.execute被调用，输入形状: [16,3,640,640,]
+  stem输出: [16,16,320,320,]
+
+Epoch 2/200:  20%|█████                    | 1/5 [00:00<00:00,  7.20it/s, loss=59.0967, lr=0.010000]
+Epoch 2/200:  40%|██████████               | 2/5 [00:00<00:00,  7.17it/s, loss=59.0967, lr=0.010000]🔍 Gold-YOLO EfficientRep.exe
+
+
+
+Warning: Failed to save checkpoint: can't pickle module objects
+
+
+不要绕开问题，深入修复所有问题！！！深入修复所有问题！！！深入修复所有问题！！！

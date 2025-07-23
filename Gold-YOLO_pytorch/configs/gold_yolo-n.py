@@ -83,3 +83,9 @@ data_aug = dict(
         mosaic=1.0,
         mixup=0.0,
 )
+
+# 训练模式配置
+training_mode = "conv_silu"
+
+# 数据配置
+data_path = "./data/coco.yaml"

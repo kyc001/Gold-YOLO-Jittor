@@ -36,3 +36,6 @@ checkpoints/
 *.pdparams
 
 pretrained/
+
+*.jt
+labels/voc2012_subset

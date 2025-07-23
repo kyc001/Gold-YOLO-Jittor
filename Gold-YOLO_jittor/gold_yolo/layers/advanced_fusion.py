@@ -82,8 +82,9 @@ class MultiScaleAttention(nn.Module):
             nn.AdaptiveAvgPool2d(scale) for scale in self.pool_scales
         ])
         
-        # 位置编码
-        self.pos_embed = nn.Parameter(jt.randn(1, embed_dim, 1, 1) * 0.02)
+        # 位置编码 - 深入修复Parameter警告
+        # 在Jittor中，直接创建变量即可，不需要Parameter包装
+        self.pos_embed = jt.randn(1, embed_dim, 1, 1) * 0.02
 
         # 多尺度特征降维
         self.dim_reduce = Conv(embed_dim * (1 + len(self.pool_scales)), embed_dim, 1, 1)

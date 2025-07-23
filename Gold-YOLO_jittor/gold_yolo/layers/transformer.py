@@ -231,8 +231,9 @@ class C2T_Attention(nn.Module):
         # 特征投影
         self.proj = nn.Conv2d(in_channels, embed_dim, 1)
         
-        # 位置编码
-        self.pos_embed = nn.Parameter(jt.randn(1, embed_dim, 1, 1))
+        # 位置编码 - 深入修复Parameter警告
+        # 在Jittor中，直接创建变量即可，不需要Parameter包装
+        self.pos_embed = jt.randn(1, embed_dim, 1, 1)
         
         # 注意力
         self.attention = MultiHeadAttention(embed_dim, num_heads)

@@ -189,17 +189,32 @@ class EfficientRep(jt.nn.Module):
     
     def forward(self, x):
         outputs = []
-        x = self.stem(x)
-        x = self.ERBlock_2(x)
-        if self.fuse_P2:
-            outputs.append(x)
-        x = self.ERBlock_3(x)
-        outputs.append(x)  # P3
-        x = self.ERBlock_4(x)
-        outputs.append(x)  # P4
-        x = self.ERBlock_5(x)
-        outputs.append(x)  # P5
-        
+
+        # 深入修复：严格按照channels_list的顺序返回特征
+        # channels_list = [27, 54, 108, 217, 435] 对应 [stem, ERBlock_2, ERBlock_3, ERBlock_4, ERBlock_5]
+        print(f"🔍 EfficientRep.forward被调用，输入形状: {x.shape}")
+
+        x = self.stem(x)  # 27通道
+        print(f"  stem输出: {x.shape}")
+        outputs.append(x)  # P0: stem输出
+
+        x = self.ERBlock_2(x)  # 54通道
+        print(f"  ERBlock_2输出: {x.shape}")
+        outputs.append(x)  # P1: ERBlock_2输出
+
+        x = self.ERBlock_3(x)  # 108通道
+        print(f"  ERBlock_3输出: {x.shape}")
+        outputs.append(x)  # P2: ERBlock_3输出
+
+        x = self.ERBlock_4(x)  # 217通道
+        print(f"  ERBlock_4输出: {x.shape}")
+        outputs.append(x)  # P3: ERBlock_4输出
+
+        x = self.ERBlock_5(x)  # 435通道
+        print(f"  ERBlock_5输出: {x.shape}")
+        outputs.append(x)  # P4: ERBlock_5输出
+
+        print(f"🔍 EfficientRep.forward返回通道数: {[out.shape[1] for out in outputs]}")
         return tuple(outputs)
     
     def execute(self, x):
