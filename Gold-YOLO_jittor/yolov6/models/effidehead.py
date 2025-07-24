@@ -143,8 +143,15 @@ class Detect(nn.Module):
 
 
 def build_effidehead_layer(channels_list, num_anchors, num_classes, reg_max=16, num_layers=3):
-    """构建高效解耦头层 - 完全对齐PyTorch版本"""
-    chx = [6, 8, 10] if num_layers == 3 else [8, 9, 10, 11]
+    """构建高效解耦头层 - 严格对齐PyTorch版本Gold-YOLO-N"""
+    # Gold-YOLO-N配置: channels_list = [128, 256, 512]
+    # 直接使用通道列表，不需要复杂的索引
+    if len(channels_list) == 3:
+        chx = [0, 1, 2]  # 对应 [128, 256, 512]
+        print(f"✅ Gold-YOLO-N检测头配置: {channels_list}")
+    else:
+        # 兼容其他配置
+        chx = [6, 8, 10] if num_layers == 3 else [8, 9, 10, 11]
 
     head_layers = nn.Sequential(
         # stem0

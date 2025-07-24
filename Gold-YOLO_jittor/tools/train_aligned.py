@@ -174,11 +174,16 @@ class AlignedTrainer:
         return self.train_loader, self.val_loader
         
     def setup_loss(self):
-        """设置损失函数 - 对齐PyTorch版本"""
+        """设置损失函数 - 完全对齐PyTorch版本"""
+        from yolov6.models.losses.loss_aligned import ComputeLoss
+
         self.compute_loss = ComputeLoss(
-            num_classes=80,
+            fpn_strides=[8, 16, 32],
+            grid_cell_size=5.0,
+            grid_cell_offset=0.5,
+            num_classes=20,  # VOC数据集
             ori_img_size=self.args.img_size,
-            warmup_epoch=self.args.warmup_epochs,
+            warmup_epoch=4,
             use_dfl=True,
             reg_max=16,
             iou_type='giou',
@@ -188,8 +193,8 @@ class AlignedTrainer:
                 'dfl': 0.5
             }
         )
-        
-        LOGGER.info(f'✅ 损失函数创建完成: ComputeLoss')
+
+        LOGGER.info(f'✅ 损失函数创建完成: ComputeLoss (完全对齐PyTorch版本)')
         return self.compute_loss
         
     def setup_optimizer(self):
@@ -316,8 +321,8 @@ def train_one_epoch(model, dataloader, compute_loss, optimizer, scheduler, epoch
         # 前向传播
         predictions = model(images)
 
-        # 计算损失
-        loss, loss_items = compute_loss(predictions, targets)
+        # 计算损失 - 使用完全对齐的损失函数
+        loss, loss_items = compute_loss(predictions, targets, epoch, batch_idx)
 
         # 反向传播
         optimizer.zero_grad()
@@ -351,8 +356,8 @@ def validate(model, dataloader, compute_loss, epoch, args):
             # 前向传播
             predictions = model(images)
 
-            # 计算损失
-            loss, loss_items = compute_loss(predictions, targets)
+            # 计算损失 - 使用完全对齐的损失函数
+            loss, loss_items = compute_loss(predictions, targets, 999, batch_idx)  # 验证时使用大epoch数
             total_loss += loss.item()
 
     return total_loss / num_batches

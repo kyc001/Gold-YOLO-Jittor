@@ -1,0 +1,48 @@
+augmentation:
+  copy_paste_prob: 0.1
+  degrees: 15.0
+  fliplr: 0.5
+  flipud: 0.1
+  hsv_h: 0.015
+  hsv_s: 0.7
+  hsv_v: 0.4
+  mixup_prob: 0.2
+  mosaic_prob: 1.0
+  scale: 0.9
+  shear: 5.0
+  translate: 0.15
+class_weights:
+  0: 2.0
+  1: 1.8
+  2: 1.9
+  3: 1.5
+  4: 1.6
+  5: 1.8
+  6: 1.4
+  7: 2.0
+  8: 1.2
+  9: 1.5
+  10: 1.5
+  11: 1.9
+  12: 1.5
+  13: 1.8
+  14: 0.8
+  15: 1.6
+  16: 1.4
+  17: 1.9
+  18: 2.0
+  19: 1.7
+loss_weights:
+  class: 3.0
+  dfl: 1.5
+  iou: 4.0
+training:
+  batch_size: 24
+  ema_decay: 0.9999
+  epochs: 400
+  lr_final: 0.0001
+  lr_initial: 0.02
+  momentum: 0.937
+  use_ema: true
+  warmup_epochs: 10
+  weight_decay: 0.0005

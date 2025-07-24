@@ -271,11 +271,16 @@ class RepVGGBlock(nn.Module):
 class RepBlock(nn.Module):
     """RepBlock - 与PyTorch版本严格对齐"""
 
-    def __init__(self, in_channels, out_channels, n=1, block=RepVGGBlock):
+    def __init__(self, in_channels, out_channels, n=1, block=RepVGGBlock, basic_block=None):
         super(RepBlock, self).__init__()
 
-        self.conv1 = block(in_channels, out_channels)
-        self.block = nn.Sequential(*(block(out_channels, out_channels) for _ in range(n - 1))) if n > 1 else None
+        # 如果指定了basic_block，使用它来创建block实例
+        if basic_block is not None:
+            self.conv1 = block(in_channels, out_channels, basic_block=basic_block)
+            self.block = nn.Sequential(*(block(out_channels, out_channels, basic_block=basic_block) for _ in range(n - 1))) if n > 1 else None
+        else:
+            self.conv1 = block(in_channels, out_channels)
+            self.block = nn.Sequential(*(block(out_channels, out_channels) for _ in range(n - 1))) if n > 1 else None
 
     def execute(self, x):
         x = self.conv1(x)
@@ -296,3 +301,84 @@ class SimConv(nn.Module):
 
     def execute(self, x):
         return self.act(self.bn(self.conv(x)))
+
+
+class Conv_C3(nn.Module):
+    """Conv for C3 - 与PyTorch版本严格对齐"""
+
+    def __init__(self, c1, c2, k=1, s=1, p=None, g=1, act=True):
+        super().__init__()
+        self.conv = nn.Conv2d(c1, c2, k, s, autopad(k, p), groups=g, bias=False)
+        self.bn = nn.BatchNorm2d(c2)
+        self.act = nn.SiLU() if act is True else (act if isinstance(act, nn.Module) else nn.Identity())
+
+    def execute(self, x):
+        return self.act(self.bn(self.conv(x)))
+
+
+class BottleRep(nn.Module):
+    """BottleRep - 与PyTorch版本严格对齐"""
+
+    def __init__(self, c1, c2, basic_block=RepVGGBlock, weight=False):
+        super().__init__()
+        self.conv1 = basic_block(c1, c2)
+        self.conv2 = basic_block(c2, c2)
+        self.shortcut = c1 == c2
+        self.weight = weight
+        if weight:
+            self.alpha = jt.ones(1)
+
+    def execute(self, x):
+        outputs = self.conv2(self.conv1(x))
+        if self.weight:
+            return outputs + self.alpha * x if self.shortcut else outputs
+        else:
+            return outputs + x if self.shortcut else outputs
+
+
+class BepC3(nn.Module):
+    '''Beer-mug RepC3 Block - 完全对齐PyTorch版本'''
+
+    def __init__(self, in_channels, out_channels, n=1, e=0.5, concat=True, block=None):
+        super().__init__()
+        c_ = int(out_channels * e)  # hidden channels
+        self.cv1 = Conv_C3(in_channels, c_, 1, 1)
+        self.cv2 = Conv_C3(in_channels, c_, 1, 1)
+        self.cv3 = Conv_C3(2 * c_, out_channels, 1, 1)
+
+        # 如果没有指定block，使用RepVGGBlock
+        if block is None:
+            block = RepVGGBlock
+
+        if block == ConvWrapper:
+            self.cv1 = Conv_C3(in_channels, c_, 1, 1, act=nn.SiLU())
+            self.cv2 = Conv_C3(in_channels, c_, 1, 1, act=nn.SiLU())
+            self.cv3 = Conv_C3(2 * c_, out_channels, 1, 1, act=nn.SiLU())
+
+        self.m = RepBlock(in_channels=c_, out_channels=c_, n=n, block=BottleRep, basic_block=block)
+        self.concat = concat
+        if not concat:
+            self.cv3 = Conv_C3(c_, out_channels, 1, 1)
+
+    def execute(self, x):
+        if self.concat is True:
+            return self.cv3(jt.concat((self.m(self.cv1(x)), self.cv2(x)), dim=1))
+        else:
+            return self.cv3(self.m(self.cv1(x)))
+
+
+class SimSPPF(nn.Module):
+    '''Simplified SPPF with ReLU activation - 完全对齐PyTorch版本'''
+
+    def __init__(self, in_channels, out_channels, kernel_size=5):
+        super().__init__()
+        c_ = in_channels // 2  # hidden channels
+        self.cv1 = SimConv(in_channels, c_, 1, 1)
+        self.cv2 = SimConv(c_ * 4, out_channels, 1, 1)
+        self.m = nn.MaxPool2d(kernel_size=kernel_size, stride=1, padding=kernel_size // 2)
+
+    def execute(self, x):
+        x = self.cv1(x)
+        y1 = self.m(x)
+        y2 = self.m(y1)
+        return self.cv2(jt.concat([x, y1, y2, self.m(y2)], 1))

@@ -1,0 +1,3782 @@
+{
+  "total_params": 574,
+  "backbone_structure": {
+    "stem": [
+      "backbone.stem.block.conv.weight",
+      "backbone.stem.block.conv.bias",
+      "backbone.stem.block.bn.weight",
+      "backbone.stem.block.bn.bias",
+      "backbone.stem.block.bn.running_mean",
+      "backbone.stem.block.bn.running_var"
+    ],
+    "ERBlocks": {
+      "2": {
+        "0": [
+          "backbone.ERBlock_2.0.block.conv.weight",
+          "backbone.ERBlock_2.0.block.conv.bias",
+          "backbone.ERBlock_2.0.block.bn.weight",
+          "backbone.ERBlock_2.0.block.bn.bias",
+          "backbone.ERBlock_2.0.block.bn.running_mean",
+          "backbone.ERBlock_2.0.block.bn.running_var"
+        ],
+        "1": [
+          "backbone.ERBlock_2.1.conv1.block.conv.weight",
+          "backbone.ERBlock_2.1.conv1.block.conv.bias",
+          "backbone.ERBlock_2.1.conv1.block.bn.weight",
+          "backbone.ERBlock_2.1.conv1.block.bn.bias",
+          "backbone.ERBlock_2.1.conv1.block.bn.running_mean",
+          "backbone.ERBlock_2.1.conv1.block.bn.running_var",
+          "backbone.ERBlock_2.1.block.0.block.conv.weight",
+          "backbone.ERBlock_2.1.block.0.block.conv.bias",
+          "backbone.ERBlock_2.1.block.0.block.bn.weight",
+          "backbone.ERBlock_2.1.block.0.block.bn.bias",
+          "backbone.ERBlock_2.1.block.0.block.bn.running_mean",
+          "backbone.ERBlock_2.1.block.0.block.bn.running_var"
+        ]
+      },
+      "3": {
+        "0": [
+          "backbone.ERBlock_3.0.block.conv.weight",
+          "backbone.ERBlock_3.0.block.conv.bias",
+          "backbone.ERBlock_3.0.block.bn.weight",
+          "backbone.ERBlock_3.0.block.bn.bias",
+          "backbone.ERBlock_3.0.block.bn.running_mean",
+          "backbone.ERBlock_3.0.block.bn.running_var"
+        ],
+        "1": [
+          "backbone.ERBlock_3.1.conv1.block.conv.weight",
+          "backbone.ERBlock_3.1.conv1.block.conv.bias",
+          "backbone.ERBlock_3.1.conv1.block.bn.weight",
+          "backbone.ERBlock_3.1.conv1.block.bn.bias",
+          "backbone.ERBlock_3.1.conv1.block.bn.running_mean",
+          "backbone.ERBlock_3.1.conv1.block.bn.running_var",
+          "backbone.ERBlock_3.1.block.0.block.conv.weight",
+          "backbone.ERBlock_3.1.block.0.block.conv.bias",
+          "backbone.ERBlock_3.1.block.0.block.bn.weight",
+          "backbone.ERBlock_3.1.block.0.block.bn.bias",
+          "backbone.ERBlock_3.1.block.0.block.bn.running_mean",
+          "backbone.ERBlock_3.1.block.0.block.bn.running_var",
+          "backbone.ERBlock_3.1.block.1.block.conv.weight",
+          "backbone.ERBlock_3.1.block.1.block.conv.bias",
+          "backbone.ERBlock_3.1.block.1.block.bn.weight",
+          "backbone.ERBlock_3.1.block.1.block.bn.bias",
+          "backbone.ERBlock_3.1.block.1.block.bn.running_mean",
+          "backbone.ERBlock_3.1.block.1.block.bn.running_var",
+          "backbone.ERBlock_3.1.block.2.block.conv.weight",
+          "backbone.ERBlock_3.1.block.2.block.conv.bias",
+          "backbone.ERBlock_3.1.block.2.block.bn.weight",
+          "backbone.ERBlock_3.1.block.2.block.bn.bias",
+          "backbone.ERBlock_3.1.block.2.block.bn.running_mean",
+          "backbone.ERBlock_3.1.block.2.block.bn.running_var"
+        ]
+      },
+      "4": {
+        "0": [
+          "backbone.ERBlock_4.0.block.conv.weight",
+          "backbone.ERBlock_4.0.block.conv.bias",
+          "backbone.ERBlock_4.0.block.bn.weight",
+          "backbone.ERBlock_4.0.block.bn.bias",
+          "backbone.ERBlock_4.0.block.bn.running_mean",
+          "backbone.ERBlock_4.0.block.bn.running_var"
+        ],
+        "1": [
+          "backbone.ERBlock_4.1.conv1.block.conv.weight",
+          "backbone.ERBlock_4.1.conv1.block.conv.bias",
+          "backbone.ERBlock_4.1.conv1.block.bn.weight",
+          "backbone.ERBlock_4.1.conv1.block.bn.bias",
+          "backbone.ERBlock_4.1.conv1.block.bn.running_mean",
+          "backbone.ERBlock_4.1.conv1.block.bn.running_var",
+          "backbone.ERBlock_4.1.block.0.block.conv.weight",
+          "backbone.ERBlock_4.1.block.0.block.conv.bias",
+          "backbone.ERBlock_4.1.block.0.block.bn.weight",
+          "backbone.ERBlock_4.1.block.0.block.bn.bias",
+          "backbone.ERBlock_4.1.block.0.block.bn.running_mean",
+          "backbone.ERBlock_4.1.block.0.block.bn.running_var",
+          "backbone.ERBlock_4.1.block.1.block.conv.weight",
+          "backbone.ERBlock_4.1.block.1.block.conv.bias",
+          "backbone.ERBlock_4.1.block.1.block.bn.weight",
+          "backbone.ERBlock_4.1.block.1.block.bn.bias",
+          "backbone.ERBlock_4.1.block.1.block.bn.running_mean",
+          "backbone.ERBlock_4.1.block.1.block.bn.running_var",
+          "backbone.ERBlock_4.1.block.2.block.conv.weight",
+          "backbone.ERBlock_4.1.block.2.block.conv.bias",
+          "backbone.ERBlock_4.1.block.2.block.bn.weight",
+          "backbone.ERBlock_4.1.block.2.block.bn.bias",
+          "backbone.ERBlock_4.1.block.2.block.bn.running_mean",
+          "backbone.ERBlock_4.1.block.2.block.bn.running_var",
+          "backbone.ERBlock_4.1.block.3.block.conv.weight",
+          "backbone.ERBlock_4.1.block.3.block.conv.bias",
+          "backbone.ERBlock_4.1.block.3.block.bn.weight",
+          "backbone.ERBlock_4.1.block.3.block.bn.bias",
+          "backbone.ERBlock_4.1.block.3.block.bn.running_mean",
+          "backbone.ERBlock_4.1.block.3.block.bn.running_var",
+          "backbone.ERBlock_4.1.block.4.block.conv.weight",
+          "backbone.ERBlock_4.1.block.4.block.conv.bias",
+          "backbone.ERBlock_4.1.block.4.block.bn.weight",
+          "backbone.ERBlock_4.1.block.4.block.bn.bias",
+          "backbone.ERBlock_4.1.block.4.block.bn.running_mean",
+          "backbone.ERBlock_4.1.block.4.block.bn.running_var"
+        ]
+      },
+      "5": {
+        "0": [
+          "backbone.ERBlock_5.0.block.conv.weight",
+          "backbone.ERBlock_5.0.block.conv.bias",
+          "backbone.ERBlock_5.0.block.bn.weight",
+          "backbone.ERBlock_5.0.block.bn.bias",
+          "backbone.ERBlock_5.0.block.bn.running_mean",
+          "backbone.ERBlock_5.0.block.bn.running_var"
+        ],
+        "1": [
+          "backbone.ERBlock_5.1.conv1.block.conv.weight",
+          "backbone.ERBlock_5.1.conv1.block.conv.bias",
+          "backbone.ERBlock_5.1.conv1.block.bn.weight",
+          "backbone.ERBlock_5.1.conv1.block.bn.bias",
+          "backbone.ERBlock_5.1.conv1.block.bn.running_mean",
+          "backbone.ERBlock_5.1.conv1.block.bn.running_var",
+          "backbone.ERBlock_5.1.block.0.block.conv.weight",
+          "backbone.ERBlock_5.1.block.0.block.conv.bias",
+          "backbone.ERBlock_5.1.block.0.block.bn.weight",
+          "backbone.ERBlock_5.1.block.0.block.bn.bias",
+          "backbone.ERBlock_5.1.block.0.block.bn.running_mean",
+          "backbone.ERBlock_5.1.block.0.block.bn.running_var"
+        ],
+        "2": [
+          "backbone.ERBlock_5.2.cv1.conv.weight",
+          "backbone.ERBlock_5.2.cv1.bn.weight",
+          "backbone.ERBlock_5.2.cv1.bn.bias",
+          "backbone.ERBlock_5.2.cv1.bn.running_mean",
+          "backbone.ERBlock_5.2.cv1.bn.running_var",
+          "backbone.ERBlock_5.2.cv2.conv.weight",
+          "backbone.ERBlock_5.2.cv2.bn.weight",
+          "backbone.ERBlock_5.2.cv2.bn.bias",
+          "backbone.ERBlock_5.2.cv2.bn.running_mean",
+          "backbone.ERBlock_5.2.cv2.bn.running_var",
+          "backbone.ERBlock_5.2.cv3.conv.weight",
+          "backbone.ERBlock_5.2.cv3.bn.weight",
+          "backbone.ERBlock_5.2.cv3.bn.bias",
+          "backbone.ERBlock_5.2.cv3.bn.running_mean",
+          "backbone.ERBlock_5.2.cv3.bn.running_var",
+          "backbone.ERBlock_5.2.cv4.conv.weight",
+          "backbone.ERBlock_5.2.cv4.bn.weight",
+          "backbone.ERBlock_5.2.cv4.bn.bias",
+          "backbone.ERBlock_5.2.cv4.bn.running_mean",
+          "backbone.ERBlock_5.2.cv4.bn.running_var",
+          "backbone.ERBlock_5.2.cv5.conv.weight",
+          "backbone.ERBlock_5.2.cv5.bn.weight",
+          "backbone.ERBlock_5.2.cv5.bn.bias",
+          "backbone.ERBlock_5.2.cv5.bn.running_mean",
+          "backbone.ERBlock_5.2.cv5.bn.running_var",
+          "backbone.ERBlock_5.2.cv6.conv.weight",
+          "backbone.ERBlock_5.2.cv6.bn.weight",
+          "backbone.ERBlock_5.2.cv6.bn.bias",
+          "backbone.ERBlock_5.2.cv6.bn.running_mean",
+          "backbone.ERBlock_5.2.cv6.bn.running_var",
+          "backbone.ERBlock_5.2.cv7.conv.weight",
+          "backbone.ERBlock_5.2.cv7.bn.weight",
+          "backbone.ERBlock_5.2.cv7.bn.bias",
+          "backbone.ERBlock_5.2.cv7.bn.running_mean",
+          "backbone.ERBlock_5.2.cv7.bn.running_var"
+        ]
+      }
+    }
+  },
+  "neck_structure": {
+    "low_IFM": [
+      "neck.low_IFM.0.conv.weight",
+      "neck.low_IFM.0.bn.weight",
+      "neck.low_IFM.0.bn.bias",
+      "neck.low_IFM.0.bn.running_mean",
+      "neck.low_IFM.0.bn.running_var",
+      "neck.low_IFM.1.block.conv.weight",
+      "neck.low_IFM.1.block.conv.bias",
+      "neck.low_IFM.1.block.bn.weight",
+      "neck.low_IFM.1.block.bn.bias",
+      "neck.low_IFM.1.block.bn.running_mean",
+      "neck.low_IFM.1.block.bn.running_var",
+      "neck.low_IFM.2.block.conv.weight",
+      "neck.low_IFM.2.block.conv.bias",
+      "neck.low_IFM.2.block.bn.weight",
+      "neck.low_IFM.2.block.bn.bias",
+      "neck.low_IFM.2.block.bn.running_mean",
+      "neck.low_IFM.2.block.bn.running_var",
+      "neck.low_IFM.3.block.conv.weight",
+      "neck.low_IFM.3.block.conv.bias",
+      "neck.low_IFM.3.block.bn.weight",
+      "neck.low_IFM.3.block.bn.bias",
+      "neck.low_IFM.3.block.bn.running_mean",
+      "neck.low_IFM.3.block.bn.running_var",
+      "neck.low_IFM.4.conv.weight",
+      "neck.low_IFM.4.bn.weight",
+      "neck.low_IFM.4.bn.bias",
+      "neck.low_IFM.4.bn.running_mean",
+      "neck.low_IFM.4.bn.running_var"
+    ],
+    "LAF": {
+      "p4": [
+        "neck.LAF_p4.cv1.conv.weight",
+        "neck.LAF_p4.cv1.bn.weight",
+        "neck.LAF_p4.cv1.bn.bias",
+        "neck.LAF_p4.cv1.bn.running_mean",
+        "neck.LAF_p4.cv1.bn.running_var",
+        "neck.LAF_p4.cv_fuse.conv.weight",
+        "neck.LAF_p4.cv_fuse.bn.weight",
+        "neck.LAF_p4.cv_fuse.bn.bias",
+        "neck.LAF_p4.cv_fuse.bn.running_mean",
+        "neck.LAF_p4.cv_fuse.bn.running_var"
+      ],
+      "p3": [
+        "neck.LAF_p3.cv1.conv.weight",
+        "neck.LAF_p3.cv1.bn.weight",
+        "neck.LAF_p3.cv1.bn.bias",
+        "neck.LAF_p3.cv1.bn.running_mean",
+        "neck.LAF_p3.cv1.bn.running_var",
+        "neck.LAF_p3.cv_fuse.conv.weight",
+        "neck.LAF_p3.cv_fuse.bn.weight",
+        "neck.LAF_p3.cv_fuse.bn.bias",
+        "neck.LAF_p3.cv_fuse.bn.running_mean",
+        "neck.LAF_p3.cv_fuse.bn.running_var"
+      ]
+    },
+    "Inject": {
+      "p4": [
+        "neck.Inject_p4.local_embedding.conv.weight",
+        "neck.Inject_p4.local_embedding.bn.weight",
+        "neck.Inject_p4.local_embedding.bn.bias",
+        "neck.Inject_p4.local_embedding.bn.running_mean",
+        "neck.Inject_p4.local_embedding.bn.running_var",
+        "neck.Inject_p4.global_embedding.conv.weight",
+        "neck.Inject_p4.global_embedding.bn.weight",
+        "neck.Inject_p4.global_embedding.bn.bias",
+        "neck.Inject_p4.global_embedding.bn.running_mean",
+        "neck.Inject_p4.global_embedding.bn.running_var",
+        "neck.Inject_p4.global_act.conv.weight",
+        "neck.Inject_p4.global_act.bn.weight",
+        "neck.Inject_p4.global_act.bn.bias",
+        "neck.Inject_p4.global_act.bn.running_mean",
+        "neck.Inject_p4.global_act.bn.running_var"
+      ],
+      "p3": [
+        "neck.Inject_p3.local_embedding.conv.weight",
+        "neck.Inject_p3.local_embedding.bn.weight",
+        "neck.Inject_p3.local_embedding.bn.bias",
+        "neck.Inject_p3.local_embedding.bn.running_mean",
+        "neck.Inject_p3.local_embedding.bn.running_var",
+        "neck.Inject_p3.global_embedding.conv.weight",
+        "neck.Inject_p3.global_embedding.bn.weight",
+        "neck.Inject_p3.global_embedding.bn.bias",
+        "neck.Inject_p3.global_embedding.bn.running_mean",
+        "neck.Inject_p3.global_embedding.bn.running_var",
+        "neck.Inject_p3.global_act.conv.weight",
+        "neck.Inject_p3.global_act.bn.weight",
+        "neck.Inject_p3.global_act.bn.bias",
+        "neck.Inject_p3.global_act.bn.running_mean",
+        "neck.Inject_p3.global_act.bn.running_var"
+      ],
+      "n4": [
+        "neck.Inject_n4.local_embedding.conv.weight",
+        "neck.Inject_n4.local_embedding.bn.weight",
+        "neck.Inject_n4.local_embedding.bn.bias",
+        "neck.Inject_n4.local_embedding.bn.running_mean",
+        "neck.Inject_n4.local_embedding.bn.running_var",
+        "neck.Inject_n4.global_embedding.conv.weight",
+        "neck.Inject_n4.global_embedding.bn.weight",
+        "neck.Inject_n4.global_embedding.bn.bias",
+        "neck.Inject_n4.global_embedding.bn.running_mean",
+        "neck.Inject_n4.global_embedding.bn.running_var",
+        "neck.Inject_n4.global_act.conv.weight",
+        "neck.Inject_n4.global_act.bn.weight",
+        "neck.Inject_n4.global_act.bn.bias",
+        "neck.Inject_n4.global_act.bn.running_mean",
+        "neck.Inject_n4.global_act.bn.running_var"
+      ],
+      "n5": [
+        "neck.Inject_n5.local_embedding.conv.weight",
+        "neck.Inject_n5.local_embedding.bn.weight",
+        "neck.Inject_n5.local_embedding.bn.bias",
+        "neck.Inject_n5.local_embedding.bn.running_mean",
+        "neck.Inject_n5.local_embedding.bn.running_var",
+        "neck.Inject_n5.global_embedding.conv.weight",
+        "neck.Inject_n5.global_embedding.bn.weight",
+        "neck.Inject_n5.global_embedding.bn.bias",
+        "neck.Inject_n5.global_embedding.bn.running_mean",
+        "neck.Inject_n5.global_embedding.bn.running_var",
+        "neck.Inject_n5.global_act.conv.weight",
+        "neck.Inject_n5.global_act.bn.weight",
+        "neck.Inject_n5.global_act.bn.bias",
+        "neck.Inject_n5.global_act.bn.running_mean",
+        "neck.Inject_n5.global_act.bn.running_var"
+      ]
+    },
+    "Rep": {
+      "p4": [
+        "neck.Rep_p4.conv1.block.conv.weight",
+        "neck.Rep_p4.conv1.block.conv.bias",
+        "neck.Rep_p4.conv1.block.bn.weight",
+        "neck.Rep_p4.conv1.block.bn.bias",
+        "neck.Rep_p4.conv1.block.bn.running_mean",
+        "neck.Rep_p4.conv1.block.bn.running_var",
+        "neck.Rep_p4.block.0.block.conv.weight",
+        "neck.Rep_p4.block.0.block.conv.bias",
+        "neck.Rep_p4.block.0.block.bn.weight",
+        "neck.Rep_p4.block.0.block.bn.bias",
+        "neck.Rep_p4.block.0.block.bn.running_mean",
+        "neck.Rep_p4.block.0.block.bn.running_var",
+        "neck.Rep_p4.block.1.block.conv.weight",
+        "neck.Rep_p4.block.1.block.conv.bias",
+        "neck.Rep_p4.block.1.block.bn.weight",
+        "neck.Rep_p4.block.1.block.bn.bias",
+        "neck.Rep_p4.block.1.block.bn.running_mean",
+        "neck.Rep_p4.block.1.block.bn.running_var",
+        "neck.Rep_p4.block.2.block.conv.weight",
+        "neck.Rep_p4.block.2.block.conv.bias",
+        "neck.Rep_p4.block.2.block.bn.weight",
+        "neck.Rep_p4.block.2.block.bn.bias",
+        "neck.Rep_p4.block.2.block.bn.running_mean",
+        "neck.Rep_p4.block.2.block.bn.running_var"
+      ],
+      "p3": [
+        "neck.Rep_p3.conv1.block.conv.weight",
+        "neck.Rep_p3.conv1.block.conv.bias",
+        "neck.Rep_p3.conv1.block.bn.weight",
+        "neck.Rep_p3.conv1.block.bn.bias",
+        "neck.Rep_p3.conv1.block.bn.running_mean",
+        "neck.Rep_p3.conv1.block.bn.running_var",
+        "neck.Rep_p3.block.0.block.conv.weight",
+        "neck.Rep_p3.block.0.block.conv.bias",
+        "neck.Rep_p3.block.0.block.bn.weight",
+        "neck.Rep_p3.block.0.block.bn.bias",
+        "neck.Rep_p3.block.0.block.bn.running_mean",
+        "neck.Rep_p3.block.0.block.bn.running_var",
+        "neck.Rep_p3.block.1.block.conv.weight",
+        "neck.Rep_p3.block.1.block.conv.bias",
+        "neck.Rep_p3.block.1.block.bn.weight",
+        "neck.Rep_p3.block.1.block.bn.bias",
+        "neck.Rep_p3.block.1.block.bn.running_mean",
+        "neck.Rep_p3.block.1.block.bn.running_var",
+        "neck.Rep_p3.block.2.block.conv.weight",
+        "neck.Rep_p3.block.2.block.conv.bias",
+        "neck.Rep_p3.block.2.block.bn.weight",
+        "neck.Rep_p3.block.2.block.bn.bias",
+        "neck.Rep_p3.block.2.block.bn.running_mean",
+        "neck.Rep_p3.block.2.block.bn.running_var"
+      ],
+      "n4": [
+        "neck.Rep_n4.conv1.block.conv.weight",
+        "neck.Rep_n4.conv1.block.conv.bias",
+        "neck.Rep_n4.conv1.block.bn.weight",
+        "neck.Rep_n4.conv1.block.bn.bias",
+        "neck.Rep_n4.conv1.block.bn.running_mean",
+        "neck.Rep_n4.conv1.block.bn.running_var",
+        "neck.Rep_n4.block.0.block.conv.weight",
+        "neck.Rep_n4.block.0.block.conv.bias",
+        "neck.Rep_n4.block.0.block.bn.weight",
+        "neck.Rep_n4.block.0.block.bn.bias",
+        "neck.Rep_n4.block.0.block.bn.running_mean",
+        "neck.Rep_n4.block.0.block.bn.running_var",
+        "neck.Rep_n4.block.1.block.conv.weight",
+        "neck.Rep_n4.block.1.block.conv.bias",
+        "neck.Rep_n4.block.1.block.bn.weight",
+        "neck.Rep_n4.block.1.block.bn.bias",
+        "neck.Rep_n4.block.1.block.bn.running_mean",
+        "neck.Rep_n4.block.1.block.bn.running_var",
+        "neck.Rep_n4.block.2.block.conv.weight",
+        "neck.Rep_n4.block.2.block.conv.bias",
+        "neck.Rep_n4.block.2.block.bn.weight",
+        "neck.Rep_n4.block.2.block.bn.bias",
+        "neck.Rep_n4.block.2.block.bn.running_mean",
+        "neck.Rep_n4.block.2.block.bn.running_var"
+      ],
+      "n5": [
+        "neck.Rep_n5.conv1.block.conv.weight",
+        "neck.Rep_n5.conv1.block.conv.bias",
+        "neck.Rep_n5.conv1.block.bn.weight",
+        "neck.Rep_n5.conv1.block.bn.bias",
+        "neck.Rep_n5.conv1.block.bn.running_mean",
+        "neck.Rep_n5.conv1.block.bn.running_var",
+        "neck.Rep_n5.block.0.block.conv.weight",
+        "neck.Rep_n5.block.0.block.conv.bias",
+        "neck.Rep_n5.block.0.block.bn.weight",
+        "neck.Rep_n5.block.0.block.bn.bias",
+        "neck.Rep_n5.block.0.block.bn.running_mean",
+        "neck.Rep_n5.block.0.block.bn.running_var",
+        "neck.Rep_n5.block.1.block.conv.weight",
+        "neck.Rep_n5.block.1.block.conv.bias",
+        "neck.Rep_n5.block.1.block.bn.weight",
+        "neck.Rep_n5.block.1.block.bn.bias",
+        "neck.Rep_n5.block.1.block.bn.running_mean",
+        "neck.Rep_n5.block.1.block.bn.running_var",
+        "neck.Rep_n5.block.2.block.conv.weight",
+        "neck.Rep_n5.block.2.block.conv.bias",
+        "neck.Rep_n5.block.2.block.bn.weight",
+        "neck.Rep_n5.block.2.block.bn.bias",
+        "neck.Rep_n5.block.2.block.bn.running_mean",
+        "neck.Rep_n5.block.2.block.bn.running_var"
+      ]
+    },
+    "high_IFM": [
+      "neck.high_IFM.transformer_blocks.0.attn.to_q.c.weight",
+      "neck.high_IFM.transformer_blocks.0.attn.to_q.bn.weight",
+      "neck.high_IFM.transformer_blocks.0.attn.to_q.bn.bias",
+      "neck.high_IFM.transformer_blocks.0.attn.to_q.bn.running_mean",
+      "neck.high_IFM.transformer_blocks.0.attn.to_q.bn.running_var",
+      "neck.high_IFM.transformer_blocks.0.attn.to_k.c.weight",
+      "neck.high_IFM.transformer_blocks.0.attn.to_k.bn.weight",
+      "neck.high_IFM.transformer_blocks.0.attn.to_k.bn.bias",
+      "neck.high_IFM.transformer_blocks.0.attn.to_k.bn.running_mean",
+      "neck.high_IFM.transformer_blocks.0.attn.to_k.bn.running_var",
+      "neck.high_IFM.transformer_blocks.0.attn.to_v.c.weight",
+      "neck.high_IFM.transformer_blocks.0.attn.to_v.bn.weight",
+      "neck.high_IFM.transformer_blocks.0.attn.to_v.bn.bias",
+      "neck.high_IFM.transformer_blocks.0.attn.to_v.bn.running_mean",
+      "neck.high_IFM.transformer_blocks.0.attn.to_v.bn.running_var",
+      "neck.high_IFM.transformer_blocks.0.attn.proj.1.c.weight",
+      "neck.high_IFM.transformer_blocks.0.attn.proj.1.bn.weight",
+      "neck.high_IFM.transformer_blocks.0.attn.proj.1.bn.bias",
+      "neck.high_IFM.transformer_blocks.0.attn.proj.1.bn.running_mean",
+      "neck.high_IFM.transformer_blocks.0.attn.proj.1.bn.running_var",
+      "neck.high_IFM.transformer_blocks.0.mlp.fc1.c.weight",
+      "neck.high_IFM.transformer_blocks.0.mlp.fc1.bn.weight",
+      "neck.high_IFM.transformer_blocks.0.mlp.fc1.bn.bias",
+      "neck.high_IFM.transformer_blocks.0.mlp.fc1.bn.running_mean",
+      "neck.high_IFM.transformer_blocks.0.mlp.fc1.bn.running_var",
+      "neck.high_IFM.transformer_blocks.0.mlp.dwconv.weight",
+      "neck.high_IFM.transformer_blocks.0.mlp.dwconv.bias",
+      "neck.high_IFM.transformer_blocks.0.mlp.fc2.c.weight",
+      "neck.high_IFM.transformer_blocks.0.mlp.fc2.bn.weight",
+      "neck.high_IFM.transformer_blocks.0.mlp.fc2.bn.bias",
+      "neck.high_IFM.transformer_blocks.0.mlp.fc2.bn.running_mean",
+      "neck.high_IFM.transformer_blocks.0.mlp.fc2.bn.running_var",
+      "neck.high_IFM.transformer_blocks.1.attn.to_q.c.weight",
+      "neck.high_IFM.transformer_blocks.1.attn.to_q.bn.weight",
+      "neck.high_IFM.transformer_blocks.1.attn.to_q.bn.bias",
+      "neck.high_IFM.transformer_blocks.1.attn.to_q.bn.running_mean",
+      "neck.high_IFM.transformer_blocks.1.attn.to_q.bn.running_var",
+      "neck.high_IFM.transformer_blocks.1.attn.to_k.c.weight",
+      "neck.high_IFM.transformer_blocks.1.attn.to_k.bn.weight",
+      "neck.high_IFM.transformer_blocks.1.attn.to_k.bn.bias",
+      "neck.high_IFM.transformer_blocks.1.attn.to_k.bn.running_mean",
+      "neck.high_IFM.transformer_blocks.1.attn.to_k.bn.running_var",
+      "neck.high_IFM.transformer_blocks.1.attn.to_v.c.weight",
+      "neck.high_IFM.transformer_blocks.1.attn.to_v.bn.weight",
+      "neck.high_IFM.transformer_blocks.1.attn.to_v.bn.bias",
+      "neck.high_IFM.transformer_blocks.1.attn.to_v.bn.running_mean",
+      "neck.high_IFM.transformer_blocks.1.attn.to_v.bn.running_var",
+      "neck.high_IFM.transformer_blocks.1.attn.proj.1.c.weight",
+      "neck.high_IFM.transformer_blocks.1.attn.proj.1.bn.weight",
+      "neck.high_IFM.transformer_blocks.1.attn.proj.1.bn.bias",
+      "neck.high_IFM.transformer_blocks.1.attn.proj.1.bn.running_mean",
+      "neck.high_IFM.transformer_blocks.1.attn.proj.1.bn.running_var",
+      "neck.high_IFM.transformer_blocks.1.mlp.fc1.c.weight",
+      "neck.high_IFM.transformer_blocks.1.mlp.fc1.bn.weight",
+      "neck.high_IFM.transformer_blocks.1.mlp.fc1.bn.bias",
+      "neck.high_IFM.transformer_blocks.1.mlp.fc1.bn.running_mean",
+      "neck.high_IFM.transformer_blocks.1.mlp.fc1.bn.running_var",
+      "neck.high_IFM.transformer_blocks.1.mlp.dwconv.weight",
+      "neck.high_IFM.transformer_blocks.1.mlp.dwconv.bias",
+      "neck.high_IFM.transformer_blocks.1.mlp.fc2.c.weight",
+      "neck.high_IFM.transformer_blocks.1.mlp.fc2.bn.weight",
+      "neck.high_IFM.transformer_blocks.1.mlp.fc2.bn.bias",
+      "neck.high_IFM.transformer_blocks.1.mlp.fc2.bn.running_mean",
+      "neck.high_IFM.transformer_blocks.1.mlp.fc2.bn.running_var"
+    ]
+  },
+  "head_structure": {
+    "stems": [
+      "detect.stems.0.conv.weight",
+      "detect.stems.0.bn.weight",
+      "detect.stems.0.bn.bias",
+      "detect.stems.0.bn.running_mean",
+      "detect.stems.0.bn.running_var",
+      "detect.stems.1.conv.weight",
+      "detect.stems.1.bn.weight",
+      "detect.stems.1.bn.bias",
+      "detect.stems.1.bn.running_mean",
+      "detect.stems.1.bn.running_var",
+      "detect.stems.2.conv.weight",
+      "detect.stems.2.bn.weight",
+      "detect.stems.2.bn.bias",
+      "detect.stems.2.bn.running_mean",
+      "detect.stems.2.bn.running_var"
+    ],
+    "cls_convs": [
+      "detect.cls_convs.0.conv.weight",
+      "detect.cls_convs.0.bn.weight",
+      "detect.cls_convs.0.bn.bias",
+      "detect.cls_convs.0.bn.running_mean",
+      "detect.cls_convs.0.bn.running_var",
+      "detect.cls_convs.1.conv.weight",
+      "detect.cls_convs.1.bn.weight",
+      "detect.cls_convs.1.bn.bias",
+      "detect.cls_convs.1.bn.running_mean",
+      "detect.cls_convs.1.bn.running_var",
+      "detect.cls_convs.2.conv.weight",
+      "detect.cls_convs.2.bn.weight",
+      "detect.cls_convs.2.bn.bias",
+      "detect.cls_convs.2.bn.running_mean",
+      "detect.cls_convs.2.bn.running_var"
+    ],
+    "reg_convs": [
+      "detect.reg_convs.0.conv.weight",
+      "detect.reg_convs.0.bn.weight",
+      "detect.reg_convs.0.bn.bias",
+      "detect.reg_convs.0.bn.running_mean",
+      "detect.reg_convs.0.bn.running_var",
+      "detect.reg_convs.1.conv.weight",
+      "detect.reg_convs.1.bn.weight",
+      "detect.reg_convs.1.bn.bias",
+      "detect.reg_convs.1.bn.running_mean",
+      "detect.reg_convs.1.bn.running_var",
+      "detect.reg_convs.2.conv.weight",
+      "detect.reg_convs.2.bn.weight",
+      "detect.reg_convs.2.bn.bias",
+      "detect.reg_convs.2.bn.running_mean",
+      "detect.reg_convs.2.bn.running_var"
+    ],
+    "cls_preds": [
+      "detect.cls_preds.0.weight",
+      "detect.cls_preds.0.bias",
+      "detect.cls_preds.1.weight",
+      "detect.cls_preds.1.bias",
+      "detect.cls_preds.2.weight",
+      "detect.cls_preds.2.bias"
+    ],
+    "reg_preds": [
+      "detect.reg_preds.0.weight",
+      "detect.reg_preds.0.bias",
+      "detect.reg_preds.1.weight",
+      "detect.reg_preds.1.bias",
+      "detect.reg_preds.2.weight",
+      "detect.reg_preds.2.bias"
+    ],
+    "other": [
+      "detect.proj",
+      "detect.proj_conv.weight"
+    ]
+  },
+  "full_architecture": {
+    "backbone": {
+      "backbone.stem.block.conv.weight": {
+        "shape": [
+          16,
+          3,
+          3,
+          3
+        ],
+        "size": 432
+      },
+      "backbone.stem.block.conv.bias": {
+        "shape": [
+          16
+        ],
+        "size": 16
+      },
+      "backbone.stem.block.bn.weight": {
+        "shape": [
+          16
+        ],
+        "size": 16
+      },
+      "backbone.stem.block.bn.bias": {
+        "shape": [
+          16
+        ],
+        "size": 16
+      },
+      "backbone.stem.block.bn.running_mean": {
+        "shape": [
+          16
+        ],
+        "size": 16
+      },
+      "backbone.stem.block.bn.running_var": {
+        "shape": [
+          16
+        ],
+        "size": 16
+      },
+      "backbone.ERBlock_2.0.block.conv.weight": {
+        "shape": [
+          32,
+          16,
+          3,
+          3
+        ],
+        "size": 4608
+      },
+      "backbone.ERBlock_2.0.block.conv.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "backbone.ERBlock_2.0.block.bn.weight": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "backbone.ERBlock_2.0.block.bn.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "backbone.ERBlock_2.0.block.bn.running_mean": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "backbone.ERBlock_2.0.block.bn.running_var": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "backbone.ERBlock_2.1.conv1.block.conv.weight": {
+        "shape": [
+          32,
+          32,
+          3,
+          3
+        ],
+        "size": 9216
+      },
+      "backbone.ERBlock_2.1.conv1.block.conv.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "backbone.ERBlock_2.1.conv1.block.bn.weight": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "backbone.ERBlock_2.1.conv1.block.bn.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "backbone.ERBlock_2.1.conv1.block.bn.running_mean": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "backbone.ERBlock_2.1.conv1.block.bn.running_var": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "backbone.ERBlock_2.1.block.0.block.conv.weight": {
+        "shape": [
+          32,
+          32,
+          3,
+          3
+        ],
+        "size": 9216
+      },
+      "backbone.ERBlock_2.1.block.0.block.conv.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "backbone.ERBlock_2.1.block.0.block.bn.weight": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "backbone.ERBlock_2.1.block.0.block.bn.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "backbone.ERBlock_2.1.block.0.block.bn.running_mean": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "backbone.ERBlock_2.1.block.0.block.bn.running_var": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "backbone.ERBlock_3.0.block.conv.weight": {
+        "shape": [
+          64,
+          32,
+          3,
+          3
+        ],
+        "size": 18432
+      },
+      "backbone.ERBlock_3.0.block.conv.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.0.block.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.0.block.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.0.block.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.0.block.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.1.conv1.block.conv.weight": {
+        "shape": [
+          64,
+          64,
+          3,
+          3
+        ],
+        "size": 36864
+      },
+      "backbone.ERBlock_3.1.conv1.block.conv.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.1.conv1.block.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.1.conv1.block.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.1.conv1.block.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.1.conv1.block.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.1.block.0.block.conv.weight": {
+        "shape": [
+          64,
+          64,
+          3,
+          3
+        ],
+        "size": 36864
+      },
+      "backbone.ERBlock_3.1.block.0.block.conv.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.1.block.0.block.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.1.block.0.block.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.1.block.0.block.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.1.block.0.block.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.1.block.1.block.conv.weight": {
+        "shape": [
+          64,
+          64,
+          3,
+          3
+        ],
+        "size": 36864
+      },
+      "backbone.ERBlock_3.1.block.1.block.conv.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.1.block.1.block.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.1.block.1.block.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.1.block.1.block.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.1.block.1.block.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.1.block.2.block.conv.weight": {
+        "shape": [
+          64,
+          64,
+          3,
+          3
+        ],
+        "size": 36864
+      },
+      "backbone.ERBlock_3.1.block.2.block.conv.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.1.block.2.block.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.1.block.2.block.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.1.block.2.block.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_3.1.block.2.block.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "backbone.ERBlock_4.0.block.conv.weight": {
+        "shape": [
+          128,
+          64,
+          3,
+          3
+        ],
+        "size": 73728
+      },
+      "backbone.ERBlock_4.0.block.conv.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.0.block.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.0.block.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.0.block.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.0.block.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.conv1.block.conv.weight": {
+        "shape": [
+          128,
+          128,
+          3,
+          3
+        ],
+        "size": 147456
+      },
+      "backbone.ERBlock_4.1.conv1.block.conv.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.conv1.block.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.conv1.block.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.conv1.block.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.conv1.block.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.0.block.conv.weight": {
+        "shape": [
+          128,
+          128,
+          3,
+          3
+        ],
+        "size": 147456
+      },
+      "backbone.ERBlock_4.1.block.0.block.conv.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.0.block.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.0.block.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.0.block.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.0.block.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.1.block.conv.weight": {
+        "shape": [
+          128,
+          128,
+          3,
+          3
+        ],
+        "size": 147456
+      },
+      "backbone.ERBlock_4.1.block.1.block.conv.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.1.block.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.1.block.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.1.block.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.1.block.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.2.block.conv.weight": {
+        "shape": [
+          128,
+          128,
+          3,
+          3
+        ],
+        "size": 147456
+      },
+      "backbone.ERBlock_4.1.block.2.block.conv.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.2.block.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.2.block.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.2.block.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.2.block.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.3.block.conv.weight": {
+        "shape": [
+          128,
+          128,
+          3,
+          3
+        ],
+        "size": 147456
+      },
+      "backbone.ERBlock_4.1.block.3.block.conv.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.3.block.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.3.block.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.3.block.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.3.block.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.4.block.conv.weight": {
+        "shape": [
+          128,
+          128,
+          3,
+          3
+        ],
+        "size": 147456
+      },
+      "backbone.ERBlock_4.1.block.4.block.conv.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.4.block.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.4.block.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.4.block.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_4.1.block.4.block.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.0.block.conv.weight": {
+        "shape": [
+          256,
+          128,
+          3,
+          3
+        ],
+        "size": 294912
+      },
+      "backbone.ERBlock_5.0.block.conv.bias": {
+        "shape": [
+          256
+        ],
+        "size": 256
+      },
+      "backbone.ERBlock_5.0.block.bn.weight": {
+        "shape": [
+          256
+        ],
+        "size": 256
+      },
+      "backbone.ERBlock_5.0.block.bn.bias": {
+        "shape": [
+          256
+        ],
+        "size": 256
+      },
+      "backbone.ERBlock_5.0.block.bn.running_mean": {
+        "shape": [
+          256
+        ],
+        "size": 256
+      },
+      "backbone.ERBlock_5.0.block.bn.running_var": {
+        "shape": [
+          256
+        ],
+        "size": 256
+      },
+      "backbone.ERBlock_5.1.conv1.block.conv.weight": {
+        "shape": [
+          256,
+          256,
+          3,
+          3
+        ],
+        "size": 589824
+      },
+      "backbone.ERBlock_5.1.conv1.block.conv.bias": {
+        "shape": [
+          256
+        ],
+        "size": 256
+      },
+      "backbone.ERBlock_5.1.conv1.block.bn.weight": {
+        "shape": [
+          256
+        ],
+        "size": 256
+      },
+      "backbone.ERBlock_5.1.conv1.block.bn.bias": {
+        "shape": [
+          256
+        ],
+        "size": 256
+      },
+      "backbone.ERBlock_5.1.conv1.block.bn.running_mean": {
+        "shape": [
+          256
+        ],
+        "size": 256
+      },
+      "backbone.ERBlock_5.1.conv1.block.bn.running_var": {
+        "shape": [
+          256
+        ],
+        "size": 256
+      },
+      "backbone.ERBlock_5.1.block.0.block.conv.weight": {
+        "shape": [
+          256,
+          256,
+          3,
+          3
+        ],
+        "size": 589824
+      },
+      "backbone.ERBlock_5.1.block.0.block.conv.bias": {
+        "shape": [
+          256
+        ],
+        "size": 256
+      },
+      "backbone.ERBlock_5.1.block.0.block.bn.weight": {
+        "shape": [
+          256
+        ],
+        "size": 256
+      },
+      "backbone.ERBlock_5.1.block.0.block.bn.bias": {
+        "shape": [
+          256
+        ],
+        "size": 256
+      },
+      "backbone.ERBlock_5.1.block.0.block.bn.running_mean": {
+        "shape": [
+          256
+        ],
+        "size": 256
+      },
+      "backbone.ERBlock_5.1.block.0.block.bn.running_var": {
+        "shape": [
+          256
+        ],
+        "size": 256
+      },
+      "backbone.ERBlock_5.2.cv1.conv.weight": {
+        "shape": [
+          128,
+          256,
+          1,
+          1
+        ],
+        "size": 32768
+      },
+      "backbone.ERBlock_5.2.cv1.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv1.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv1.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv1.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv2.conv.weight": {
+        "shape": [
+          128,
+          256,
+          1,
+          1
+        ],
+        "size": 32768
+      },
+      "backbone.ERBlock_5.2.cv2.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv2.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv2.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv2.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv3.conv.weight": {
+        "shape": [
+          128,
+          128,
+          3,
+          3
+        ],
+        "size": 147456
+      },
+      "backbone.ERBlock_5.2.cv3.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv3.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv3.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv3.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv4.conv.weight": {
+        "shape": [
+          128,
+          128,
+          1,
+          1
+        ],
+        "size": 16384
+      },
+      "backbone.ERBlock_5.2.cv4.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv4.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv4.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv4.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv5.conv.weight": {
+        "shape": [
+          128,
+          512,
+          1,
+          1
+        ],
+        "size": 65536
+      },
+      "backbone.ERBlock_5.2.cv5.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv5.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv5.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv5.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv6.conv.weight": {
+        "shape": [
+          128,
+          128,
+          3,
+          3
+        ],
+        "size": 147456
+      },
+      "backbone.ERBlock_5.2.cv6.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv6.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv6.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv6.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "backbone.ERBlock_5.2.cv7.conv.weight": {
+        "shape": [
+          256,
+          256,
+          1,
+          1
+        ],
+        "size": 65536
+      },
+      "backbone.ERBlock_5.2.cv7.bn.weight": {
+        "shape": [
+          256
+        ],
+        "size": 256
+      },
+      "backbone.ERBlock_5.2.cv7.bn.bias": {
+        "shape": [
+          256
+        ],
+        "size": 256
+      },
+      "backbone.ERBlock_5.2.cv7.bn.running_mean": {
+        "shape": [
+          256
+        ],
+        "size": 256
+      },
+      "backbone.ERBlock_5.2.cv7.bn.running_var": {
+        "shape": [
+          256
+        ],
+        "size": 256
+      }
+    },
+    "neck": {
+      "neck.low_IFM.0.conv.weight": {
+        "shape": [
+          96,
+          480,
+          1,
+          1
+        ],
+        "size": 46080
+      },
+      "neck.low_IFM.0.bn.weight": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.low_IFM.0.bn.bias": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.low_IFM.0.bn.running_mean": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.low_IFM.0.bn.running_var": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.low_IFM.1.block.conv.weight": {
+        "shape": [
+          96,
+          96,
+          3,
+          3
+        ],
+        "size": 82944
+      },
+      "neck.low_IFM.1.block.conv.bias": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.low_IFM.1.block.bn.weight": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.low_IFM.1.block.bn.bias": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.low_IFM.1.block.bn.running_mean": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.low_IFM.1.block.bn.running_var": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.low_IFM.2.block.conv.weight": {
+        "shape": [
+          96,
+          96,
+          3,
+          3
+        ],
+        "size": 82944
+      },
+      "neck.low_IFM.2.block.conv.bias": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.low_IFM.2.block.bn.weight": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.low_IFM.2.block.bn.bias": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.low_IFM.2.block.bn.running_mean": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.low_IFM.2.block.bn.running_var": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.low_IFM.3.block.conv.weight": {
+        "shape": [
+          96,
+          96,
+          3,
+          3
+        ],
+        "size": 82944
+      },
+      "neck.low_IFM.3.block.conv.bias": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.low_IFM.3.block.bn.weight": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.low_IFM.3.block.bn.bias": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.low_IFM.3.block.bn.running_mean": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.low_IFM.3.block.bn.running_var": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.low_IFM.4.conv.weight": {
+        "shape": [
+          96,
+          96,
+          1,
+          1
+        ],
+        "size": 9216
+      },
+      "neck.low_IFM.4.bn.weight": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.low_IFM.4.bn.bias": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.low_IFM.4.bn.running_mean": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.low_IFM.4.bn.running_var": {
+        "shape": [
+          96
+        ],
+        "size": 96
+      },
+      "neck.reduce_layer_c5.conv.weight": {
+        "shape": [
+          64,
+          256,
+          1,
+          1
+        ],
+        "size": 16384
+      },
+      "neck.reduce_layer_c5.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.reduce_layer_c5.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.reduce_layer_c5.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.reduce_layer_c5.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.LAF_p4.cv1.conv.weight": {
+        "shape": [
+          64,
+          128,
+          1,
+          1
+        ],
+        "size": 8192
+      },
+      "neck.LAF_p4.cv1.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.LAF_p4.cv1.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.LAF_p4.cv1.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.LAF_p4.cv1.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.LAF_p4.cv_fuse.conv.weight": {
+        "shape": [
+          64,
+          192,
+          1,
+          1
+        ],
+        "size": 12288
+      },
+      "neck.LAF_p4.cv_fuse.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.LAF_p4.cv_fuse.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.LAF_p4.cv_fuse.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.LAF_p4.cv_fuse.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_p4.local_embedding.conv.weight": {
+        "shape": [
+          64,
+          64,
+          1,
+          1
+        ],
+        "size": 4096
+      },
+      "neck.Inject_p4.local_embedding.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_p4.local_embedding.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_p4.local_embedding.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_p4.local_embedding.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_p4.global_embedding.conv.weight": {
+        "shape": [
+          64,
+          64,
+          1,
+          1
+        ],
+        "size": 4096
+      },
+      "neck.Inject_p4.global_embedding.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_p4.global_embedding.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_p4.global_embedding.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_p4.global_embedding.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_p4.global_act.conv.weight": {
+        "shape": [
+          64,
+          64,
+          1,
+          1
+        ],
+        "size": 4096
+      },
+      "neck.Inject_p4.global_act.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_p4.global_act.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_p4.global_act.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_p4.global_act.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_p4.conv1.block.conv.weight": {
+        "shape": [
+          64,
+          64,
+          3,
+          3
+        ],
+        "size": 36864
+      },
+      "neck.Rep_p4.conv1.block.conv.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_p4.conv1.block.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_p4.conv1.block.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_p4.conv1.block.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_p4.conv1.block.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_p4.block.0.block.conv.weight": {
+        "shape": [
+          64,
+          64,
+          3,
+          3
+        ],
+        "size": 36864
+      },
+      "neck.Rep_p4.block.0.block.conv.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_p4.block.0.block.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_p4.block.0.block.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_p4.block.0.block.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_p4.block.0.block.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_p4.block.1.block.conv.weight": {
+        "shape": [
+          64,
+          64,
+          3,
+          3
+        ],
+        "size": 36864
+      },
+      "neck.Rep_p4.block.1.block.conv.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_p4.block.1.block.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_p4.block.1.block.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_p4.block.1.block.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_p4.block.1.block.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_p4.block.2.block.conv.weight": {
+        "shape": [
+          64,
+          64,
+          3,
+          3
+        ],
+        "size": 36864
+      },
+      "neck.Rep_p4.block.2.block.conv.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_p4.block.2.block.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_p4.block.2.block.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_p4.block.2.block.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_p4.block.2.block.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.reduce_layer_p4.conv.weight": {
+        "shape": [
+          32,
+          64,
+          1,
+          1
+        ],
+        "size": 2048
+      },
+      "neck.reduce_layer_p4.bn.weight": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.reduce_layer_p4.bn.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.reduce_layer_p4.bn.running_mean": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.reduce_layer_p4.bn.running_var": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.LAF_p3.cv1.conv.weight": {
+        "shape": [
+          32,
+          64,
+          1,
+          1
+        ],
+        "size": 2048
+      },
+      "neck.LAF_p3.cv1.bn.weight": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.LAF_p3.cv1.bn.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.LAF_p3.cv1.bn.running_mean": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.LAF_p3.cv1.bn.running_var": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.LAF_p3.cv_fuse.conv.weight": {
+        "shape": [
+          32,
+          96,
+          1,
+          1
+        ],
+        "size": 3072
+      },
+      "neck.LAF_p3.cv_fuse.bn.weight": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.LAF_p3.cv_fuse.bn.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.LAF_p3.cv_fuse.bn.running_mean": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.LAF_p3.cv_fuse.bn.running_var": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Inject_p3.local_embedding.conv.weight": {
+        "shape": [
+          32,
+          32,
+          1,
+          1
+        ],
+        "size": 1024
+      },
+      "neck.Inject_p3.local_embedding.bn.weight": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Inject_p3.local_embedding.bn.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Inject_p3.local_embedding.bn.running_mean": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Inject_p3.local_embedding.bn.running_var": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Inject_p3.global_embedding.conv.weight": {
+        "shape": [
+          32,
+          32,
+          1,
+          1
+        ],
+        "size": 1024
+      },
+      "neck.Inject_p3.global_embedding.bn.weight": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Inject_p3.global_embedding.bn.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Inject_p3.global_embedding.bn.running_mean": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Inject_p3.global_embedding.bn.running_var": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Inject_p3.global_act.conv.weight": {
+        "shape": [
+          32,
+          32,
+          1,
+          1
+        ],
+        "size": 1024
+      },
+      "neck.Inject_p3.global_act.bn.weight": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Inject_p3.global_act.bn.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Inject_p3.global_act.bn.running_mean": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Inject_p3.global_act.bn.running_var": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Rep_p3.conv1.block.conv.weight": {
+        "shape": [
+          32,
+          32,
+          3,
+          3
+        ],
+        "size": 9216
+      },
+      "neck.Rep_p3.conv1.block.conv.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Rep_p3.conv1.block.bn.weight": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Rep_p3.conv1.block.bn.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Rep_p3.conv1.block.bn.running_mean": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Rep_p3.conv1.block.bn.running_var": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Rep_p3.block.0.block.conv.weight": {
+        "shape": [
+          32,
+          32,
+          3,
+          3
+        ],
+        "size": 9216
+      },
+      "neck.Rep_p3.block.0.block.conv.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Rep_p3.block.0.block.bn.weight": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Rep_p3.block.0.block.bn.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Rep_p3.block.0.block.bn.running_mean": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Rep_p3.block.0.block.bn.running_var": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Rep_p3.block.1.block.conv.weight": {
+        "shape": [
+          32,
+          32,
+          3,
+          3
+        ],
+        "size": 9216
+      },
+      "neck.Rep_p3.block.1.block.conv.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Rep_p3.block.1.block.bn.weight": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Rep_p3.block.1.block.bn.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Rep_p3.block.1.block.bn.running_mean": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Rep_p3.block.1.block.bn.running_var": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Rep_p3.block.2.block.conv.weight": {
+        "shape": [
+          32,
+          32,
+          3,
+          3
+        ],
+        "size": 9216
+      },
+      "neck.Rep_p3.block.2.block.conv.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Rep_p3.block.2.block.bn.weight": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Rep_p3.block.2.block.bn.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Rep_p3.block.2.block.bn.running_mean": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.Rep_p3.block.2.block.bn.running_var": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.high_IFM.transformer_blocks.0.attn.to_q.c.weight": {
+        "shape": [
+          32,
+          352,
+          1,
+          1
+        ],
+        "size": 11264
+      },
+      "neck.high_IFM.transformer_blocks.0.attn.to_q.bn.weight": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.high_IFM.transformer_blocks.0.attn.to_q.bn.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.high_IFM.transformer_blocks.0.attn.to_q.bn.running_mean": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.high_IFM.transformer_blocks.0.attn.to_q.bn.running_var": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.high_IFM.transformer_blocks.0.attn.to_k.c.weight": {
+        "shape": [
+          32,
+          352,
+          1,
+          1
+        ],
+        "size": 11264
+      },
+      "neck.high_IFM.transformer_blocks.0.attn.to_k.bn.weight": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.high_IFM.transformer_blocks.0.attn.to_k.bn.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.high_IFM.transformer_blocks.0.attn.to_k.bn.running_mean": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.high_IFM.transformer_blocks.0.attn.to_k.bn.running_var": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.high_IFM.transformer_blocks.0.attn.to_v.c.weight": {
+        "shape": [
+          64,
+          352,
+          1,
+          1
+        ],
+        "size": 22528
+      },
+      "neck.high_IFM.transformer_blocks.0.attn.to_v.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.high_IFM.transformer_blocks.0.attn.to_v.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.high_IFM.transformer_blocks.0.attn.to_v.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.high_IFM.transformer_blocks.0.attn.to_v.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.high_IFM.transformer_blocks.0.attn.proj.1.c.weight": {
+        "shape": [
+          352,
+          64,
+          1,
+          1
+        ],
+        "size": 22528
+      },
+      "neck.high_IFM.transformer_blocks.0.attn.proj.1.bn.weight": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.0.attn.proj.1.bn.bias": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.0.attn.proj.1.bn.running_mean": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.0.attn.proj.1.bn.running_var": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.0.mlp.fc1.c.weight": {
+        "shape": [
+          352,
+          352,
+          1,
+          1
+        ],
+        "size": 123904
+      },
+      "neck.high_IFM.transformer_blocks.0.mlp.fc1.bn.weight": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.0.mlp.fc1.bn.bias": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.0.mlp.fc1.bn.running_mean": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.0.mlp.fc1.bn.running_var": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.0.mlp.dwconv.weight": {
+        "shape": [
+          352,
+          1,
+          3,
+          3
+        ],
+        "size": 3168
+      },
+      "neck.high_IFM.transformer_blocks.0.mlp.dwconv.bias": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.0.mlp.fc2.c.weight": {
+        "shape": [
+          352,
+          352,
+          1,
+          1
+        ],
+        "size": 123904
+      },
+      "neck.high_IFM.transformer_blocks.0.mlp.fc2.bn.weight": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.0.mlp.fc2.bn.bias": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.0.mlp.fc2.bn.running_mean": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.0.mlp.fc2.bn.running_var": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.1.attn.to_q.c.weight": {
+        "shape": [
+          32,
+          352,
+          1,
+          1
+        ],
+        "size": 11264
+      },
+      "neck.high_IFM.transformer_blocks.1.attn.to_q.bn.weight": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.high_IFM.transformer_blocks.1.attn.to_q.bn.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.high_IFM.transformer_blocks.1.attn.to_q.bn.running_mean": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.high_IFM.transformer_blocks.1.attn.to_q.bn.running_var": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.high_IFM.transformer_blocks.1.attn.to_k.c.weight": {
+        "shape": [
+          32,
+          352,
+          1,
+          1
+        ],
+        "size": 11264
+      },
+      "neck.high_IFM.transformer_blocks.1.attn.to_k.bn.weight": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.high_IFM.transformer_blocks.1.attn.to_k.bn.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.high_IFM.transformer_blocks.1.attn.to_k.bn.running_mean": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.high_IFM.transformer_blocks.1.attn.to_k.bn.running_var": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "neck.high_IFM.transformer_blocks.1.attn.to_v.c.weight": {
+        "shape": [
+          64,
+          352,
+          1,
+          1
+        ],
+        "size": 22528
+      },
+      "neck.high_IFM.transformer_blocks.1.attn.to_v.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.high_IFM.transformer_blocks.1.attn.to_v.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.high_IFM.transformer_blocks.1.attn.to_v.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.high_IFM.transformer_blocks.1.attn.to_v.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.high_IFM.transformer_blocks.1.attn.proj.1.c.weight": {
+        "shape": [
+          352,
+          64,
+          1,
+          1
+        ],
+        "size": 22528
+      },
+      "neck.high_IFM.transformer_blocks.1.attn.proj.1.bn.weight": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.1.attn.proj.1.bn.bias": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.1.attn.proj.1.bn.running_mean": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.1.attn.proj.1.bn.running_var": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.1.mlp.fc1.c.weight": {
+        "shape": [
+          352,
+          352,
+          1,
+          1
+        ],
+        "size": 123904
+      },
+      "neck.high_IFM.transformer_blocks.1.mlp.fc1.bn.weight": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.1.mlp.fc1.bn.bias": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.1.mlp.fc1.bn.running_mean": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.1.mlp.fc1.bn.running_var": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.1.mlp.dwconv.weight": {
+        "shape": [
+          352,
+          1,
+          3,
+          3
+        ],
+        "size": 3168
+      },
+      "neck.high_IFM.transformer_blocks.1.mlp.dwconv.bias": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.1.mlp.fc2.c.weight": {
+        "shape": [
+          352,
+          352,
+          1,
+          1
+        ],
+        "size": 123904
+      },
+      "neck.high_IFM.transformer_blocks.1.mlp.fc2.bn.weight": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.1.mlp.fc2.bn.bias": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.1.mlp.fc2.bn.running_mean": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.high_IFM.transformer_blocks.1.mlp.fc2.bn.running_var": {
+        "shape": [
+          352
+        ],
+        "size": 352
+      },
+      "neck.conv_1x1_n.weight": {
+        "shape": [
+          192,
+          352,
+          1,
+          1
+        ],
+        "size": 67584
+      },
+      "neck.conv_1x1_n.bias": {
+        "shape": [
+          192
+        ],
+        "size": 192
+      },
+      "neck.Inject_n4.local_embedding.conv.weight": {
+        "shape": [
+          64,
+          64,
+          1,
+          1
+        ],
+        "size": 4096
+      },
+      "neck.Inject_n4.local_embedding.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_n4.local_embedding.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_n4.local_embedding.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_n4.local_embedding.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_n4.global_embedding.conv.weight": {
+        "shape": [
+          64,
+          64,
+          1,
+          1
+        ],
+        "size": 4096
+      },
+      "neck.Inject_n4.global_embedding.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_n4.global_embedding.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_n4.global_embedding.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_n4.global_embedding.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_n4.global_act.conv.weight": {
+        "shape": [
+          64,
+          64,
+          1,
+          1
+        ],
+        "size": 4096
+      },
+      "neck.Inject_n4.global_act.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_n4.global_act.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_n4.global_act.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_n4.global_act.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_n4.conv1.block.conv.weight": {
+        "shape": [
+          64,
+          64,
+          3,
+          3
+        ],
+        "size": 36864
+      },
+      "neck.Rep_n4.conv1.block.conv.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_n4.conv1.block.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_n4.conv1.block.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_n4.conv1.block.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_n4.conv1.block.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_n4.block.0.block.conv.weight": {
+        "shape": [
+          64,
+          64,
+          3,
+          3
+        ],
+        "size": 36864
+      },
+      "neck.Rep_n4.block.0.block.conv.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_n4.block.0.block.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_n4.block.0.block.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_n4.block.0.block.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_n4.block.0.block.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_n4.block.1.block.conv.weight": {
+        "shape": [
+          64,
+          64,
+          3,
+          3
+        ],
+        "size": 36864
+      },
+      "neck.Rep_n4.block.1.block.conv.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_n4.block.1.block.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_n4.block.1.block.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_n4.block.1.block.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_n4.block.1.block.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_n4.block.2.block.conv.weight": {
+        "shape": [
+          64,
+          64,
+          3,
+          3
+        ],
+        "size": 36864
+      },
+      "neck.Rep_n4.block.2.block.conv.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_n4.block.2.block.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_n4.block.2.block.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_n4.block.2.block.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Rep_n4.block.2.block.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "neck.Inject_n5.local_embedding.conv.weight": {
+        "shape": [
+          128,
+          128,
+          1,
+          1
+        ],
+        "size": 16384
+      },
+      "neck.Inject_n5.local_embedding.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Inject_n5.local_embedding.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Inject_n5.local_embedding.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Inject_n5.local_embedding.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Inject_n5.global_embedding.conv.weight": {
+        "shape": [
+          128,
+          128,
+          1,
+          1
+        ],
+        "size": 16384
+      },
+      "neck.Inject_n5.global_embedding.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Inject_n5.global_embedding.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Inject_n5.global_embedding.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Inject_n5.global_embedding.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Inject_n5.global_act.conv.weight": {
+        "shape": [
+          128,
+          128,
+          1,
+          1
+        ],
+        "size": 16384
+      },
+      "neck.Inject_n5.global_act.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Inject_n5.global_act.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Inject_n5.global_act.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Inject_n5.global_act.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Rep_n5.conv1.block.conv.weight": {
+        "shape": [
+          128,
+          128,
+          3,
+          3
+        ],
+        "size": 147456
+      },
+      "neck.Rep_n5.conv1.block.conv.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Rep_n5.conv1.block.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Rep_n5.conv1.block.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Rep_n5.conv1.block.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Rep_n5.conv1.block.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Rep_n5.block.0.block.conv.weight": {
+        "shape": [
+          128,
+          128,
+          3,
+          3
+        ],
+        "size": 147456
+      },
+      "neck.Rep_n5.block.0.block.conv.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Rep_n5.block.0.block.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Rep_n5.block.0.block.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Rep_n5.block.0.block.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Rep_n5.block.0.block.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Rep_n5.block.1.block.conv.weight": {
+        "shape": [
+          128,
+          128,
+          3,
+          3
+        ],
+        "size": 147456
+      },
+      "neck.Rep_n5.block.1.block.conv.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Rep_n5.block.1.block.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Rep_n5.block.1.block.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Rep_n5.block.1.block.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Rep_n5.block.1.block.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Rep_n5.block.2.block.conv.weight": {
+        "shape": [
+          128,
+          128,
+          3,
+          3
+        ],
+        "size": 147456
+      },
+      "neck.Rep_n5.block.2.block.conv.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Rep_n5.block.2.block.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Rep_n5.block.2.block.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Rep_n5.block.2.block.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "neck.Rep_n5.block.2.block.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      }
+    },
+    "detect": {
+      "detect.proj": {
+        "shape": [
+          17
+        ],
+        "size": 17
+      },
+      "detect.proj_conv.weight": {
+        "shape": [
+          1,
+          17,
+          1,
+          1
+        ],
+        "size": 17
+      },
+      "detect.stems.0.conv.weight": {
+        "shape": [
+          32,
+          32,
+          1,
+          1
+        ],
+        "size": 1024
+      },
+      "detect.stems.0.bn.weight": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "detect.stems.0.bn.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "detect.stems.0.bn.running_mean": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "detect.stems.0.bn.running_var": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "detect.stems.1.conv.weight": {
+        "shape": [
+          64,
+          64,
+          1,
+          1
+        ],
+        "size": 4096
+      },
+      "detect.stems.1.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "detect.stems.1.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "detect.stems.1.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "detect.stems.1.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "detect.stems.2.conv.weight": {
+        "shape": [
+          128,
+          128,
+          1,
+          1
+        ],
+        "size": 16384
+      },
+      "detect.stems.2.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "detect.stems.2.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "detect.stems.2.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "detect.stems.2.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "detect.cls_convs.0.conv.weight": {
+        "shape": [
+          32,
+          32,
+          3,
+          3
+        ],
+        "size": 9216
+      },
+      "detect.cls_convs.0.bn.weight": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "detect.cls_convs.0.bn.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "detect.cls_convs.0.bn.running_mean": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "detect.cls_convs.0.bn.running_var": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "detect.cls_convs.1.conv.weight": {
+        "shape": [
+          64,
+          64,
+          3,
+          3
+        ],
+        "size": 36864
+      },
+      "detect.cls_convs.1.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "detect.cls_convs.1.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "detect.cls_convs.1.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "detect.cls_convs.1.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "detect.cls_convs.2.conv.weight": {
+        "shape": [
+          128,
+          128,
+          3,
+          3
+        ],
+        "size": 147456
+      },
+      "detect.cls_convs.2.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "detect.cls_convs.2.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "detect.cls_convs.2.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "detect.cls_convs.2.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "detect.reg_convs.0.conv.weight": {
+        "shape": [
+          32,
+          32,
+          3,
+          3
+        ],
+        "size": 9216
+      },
+      "detect.reg_convs.0.bn.weight": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "detect.reg_convs.0.bn.bias": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "detect.reg_convs.0.bn.running_mean": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "detect.reg_convs.0.bn.running_var": {
+        "shape": [
+          32
+        ],
+        "size": 32
+      },
+      "detect.reg_convs.1.conv.weight": {
+        "shape": [
+          64,
+          64,
+          3,
+          3
+        ],
+        "size": 36864
+      },
+      "detect.reg_convs.1.bn.weight": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "detect.reg_convs.1.bn.bias": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "detect.reg_convs.1.bn.running_mean": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "detect.reg_convs.1.bn.running_var": {
+        "shape": [
+          64
+        ],
+        "size": 64
+      },
+      "detect.reg_convs.2.conv.weight": {
+        "shape": [
+          128,
+          128,
+          3,
+          3
+        ],
+        "size": 147456
+      },
+      "detect.reg_convs.2.bn.weight": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "detect.reg_convs.2.bn.bias": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "detect.reg_convs.2.bn.running_mean": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "detect.reg_convs.2.bn.running_var": {
+        "shape": [
+          128
+        ],
+        "size": 128
+      },
+      "detect.cls_preds.0.weight": {
+        "shape": [
+          20,
+          32,
+          1,
+          1
+        ],
+        "size": 640
+      },
+      "detect.cls_preds.0.bias": {
+        "shape": [
+          20
+        ],
+        "size": 20
+      },
+      "detect.cls_preds.1.weight": {
+        "shape": [
+          20,
+          64,
+          1,
+          1
+        ],
+        "size": 1280
+      },
+      "detect.cls_preds.1.bias": {
+        "shape": [
+          20
+        ],
+        "size": 20
+      },
+      "detect.cls_preds.2.weight": {
+        "shape": [
+          20,
+          128,
+          1,
+          1
+        ],
+        "size": 2560
+      },
+      "detect.cls_preds.2.bias": {
+        "shape": [
+          20
+        ],
+        "size": 20
+      },
+      "detect.reg_preds.0.weight": {
+        "shape": [
+          4,
+          32,
+          1,
+          1
+        ],
+        "size": 128
+      },
+      "detect.reg_preds.0.bias": {
+        "shape": [
+          4
+        ],
+        "size": 4
+      },
+      "detect.reg_preds.1.weight": {
+        "shape": [
+          4,
+          64,
+          1,
+          1
+        ],
+        "size": 256
+      },
+      "detect.reg_preds.1.bias": {
+        "shape": [
+          4
+        ],
+        "size": 4
+      },
+      "detect.reg_preds.2.weight": {
+        "shape": [
+          4,
+          128,
+          1,
+          1
+        ],
+        "size": 512
+      },
+      "detect.reg_preds.2.bias": {
+        "shape": [
+          4
+        ],
+        "size": 4
+      }
+    },
+    "other": {}
+  }
+}
