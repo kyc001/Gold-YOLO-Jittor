@@ -1,32 +1,29 @@
-"""
-Gold-YOLO Jittor Implementation
-新芽第二阶段：模块化的Gold-YOLO实现
+# GOLD-YOLO Jittor版本 - 主模块初始化文件
+# 从PyTorch版本迁移到Jittor框架，严格对齐所有功能
 
-参考PyTorch的组织方式，提供清晰的API接口
-"""
-
-__version__ = "1.0.0"
-__author__ = "新芽第二阶段"
-
-# 导入核心组件
-from .models import GoldYOLO, FullPyTorchGoldYOLOSmall, build_gold_yolo_small
-from .utils import FullYOLODecoder, YOLODecoder
-
-# 便捷的构建函数
-def build_model(config_path=None, num_classes=80):
-    """构建Gold-YOLO模型"""
-    return GoldYOLO(num_classes=num_classes)
-
-def build_decoder(input_size=640, num_classes=80):
-    """构建YOLO解码器"""
-    return FullYOLODecoder(input_size=input_size, num_classes=num_classes)
+from .common import AdvPoolFusion, SimFusion_3in, SimFusion_4in
+from .layers import Conv, Conv2d_BN, DropPath, h_sigmoid, drop_path
+from .transformer import (
+    Mlp, Attention, top_Block, PyramidPoolAgg, 
+    TopBasicLayer, InjectionMultiSum_Auto_pool, onnx_AdaptiveAvgPool2d
+)
+from .reppan import RepGDNeck
+from .switch_tool import switch_to_deploy, convert_checkpoint_False, convert_checkpoint_True
 
 __all__ = [
-    'GoldYOLO',
-    'FullPyTorchGoldYOLOSmall',
-    'FullYOLODecoder',
-    'YOLODecoder',
-    'build_model',
-    'build_decoder',
-    'build_gold_yolo_small'
+    # common
+    'AdvPoolFusion', 'SimFusion_3in', 'SimFusion_4in',
+    
+    # layers  
+    'Conv', 'Conv2d_BN', 'DropPath', 'h_sigmoid', 'drop_path',
+    
+    # transformer
+    'Mlp', 'Attention', 'top_Block', 'PyramidPoolAgg',
+    'TopBasicLayer', 'InjectionMultiSum_Auto_pool', 'onnx_AdaptiveAvgPool2d',
+    
+    # reppan
+    'RepGDNeck',
+    
+    # switch_tool
+    'switch_to_deploy', 'convert_checkpoint_False', 'convert_checkpoint_True'
 ]

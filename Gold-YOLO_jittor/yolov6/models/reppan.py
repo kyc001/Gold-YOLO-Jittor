@@ -1,70 +1,215 @@
-#!/usr/bin/env python3
-# -*- coding:utf-8 -*-
 """
-RepPAN模块 - 深入修复导入问题
-新芽第二阶段：为转换组件提供兼容性支持
+GOLD-YOLO Jittor版本 - RepPAN Neck
+从PyTorch版本迁移到Jittor框架
 """
 
-import jittor as jt
 import jittor.nn as nn
+from yolov6.layers.common import *
 
-# 深入修复：项目结构整理后，repgdneck.py已被删除
-# 直接使用我们自己的RepPANNeck实现，不依赖外部文件
-print("🔧 使用内置RepPANNeck实现 - 项目结构已整理")
 
 class RepPANNeck(nn.Module):
-    """RepPAN Neck - 兼容转换组件的简化版本"""
+    """Rep-PAN
+    The default neck of YOLOv6.
+    """
     
-    def __init__(self, channels_list, num_repeats, block, extra_cfg=None):
+    def __init__(
+            self,
+            channels_list=None,
+            num_repeats=None,
+            block=RepVGGBlock,
+            extra_cfg=None
+    ):
         super().__init__()
-        self.channels_list = channels_list
-        self.num_repeats = num_repeats
-        self.block = block
-        self.extra_cfg = extra_cfg or {}
         
-        print(f"🔧 创建RepPANNeck:")
-        print(f"   channels_list: {channels_list}")
-        print(f"   num_repeats: {num_repeats}")
+        assert channels_list is not None
+        assert num_repeats is not None
         
-        # 简化的neck实现
-        self.neck_layers = nn.ModuleList()
+        self.Rep_p4 = RepBlock(
+                in_channels=channels_list[3] + channels_list[5],
+                out_channels=channels_list[5],
+                n=num_repeats[5],
+                block=block,
+        )
         
-        # 为后3个通道创建处理层
-        if len(channels_list) >= 3:
-            for i, ch in enumerate(channels_list[-3:]):
-                layer = nn.Sequential(
-                    nn.Conv2d(ch, ch, 3, 1, 1),
-                    nn.BatchNorm2d(ch),
-                    nn.SiLU()
-                )
-                self.neck_layers.append(layer)
+        self.Rep_p3 = RepBlock(
+                in_channels=channels_list[2] + channels_list[6],
+                out_channels=channels_list[6],
+                n=num_repeats[6],
+                block=block,
+        )
+        
+        self.Rep_n3 = RepBlock(
+                in_channels=channels_list[6] + channels_list[7],
+                out_channels=channels_list[7],
+                n=num_repeats[7],
+                block=block,
+        )
+        
+        self.Rep_n4 = RepBlock(
+                in_channels=channels_list[5] + channels_list[8],
+                out_channels=channels_list[8],
+                n=num_repeats[8],
+                block=block,
+        )
+        
+        self.reduce_layer0 = ConvWrapper(
+                in_channels=channels_list[4],
+                out_channels=channels_list[5],
+                kernel_size=1,
+                stride=1,
+        )
+        
+        self.upsample0 = nn.Upsample(scale_factor=2)
+        self.reduce_layer1 = ConvWrapper(
+                in_channels=channels_list[5],
+                out_channels=channels_list[6],
+                kernel_size=1,
+                stride=1,
+        )
+        
+        self.upsample1 = nn.Upsample(scale_factor=2)
+        self.downsample2 = ConvWrapper(
+                in_channels=channels_list[6],
+                out_channels=channels_list[7],
+                kernel_size=3,
+                stride=2,
+        )
+        
+        self.downsample1 = ConvWrapper(
+                in_channels=channels_list[7],
+                out_channels=channels_list[8],
+                kernel_size=3,
+                stride=2,
+        )
     
-    def execute(self, x):
-        """前向传播"""
-        if isinstance(x, (list, tuple)):
-            # 取后3个特征
-            features = x[-3:] if len(x) >= 3 else x
-            
-            # 处理每个特征
-            outputs = []
-            for i, feat in enumerate(features):
-                if i < len(self.neck_layers):
-                    out = self.neck_layers[i](feat)
-                else:
-                    out = feat
-                outputs.append(out)
-            
-            return outputs
-        else:
-            # 单一输入
-            return [x, x, x]
+    def execute(self, input):
+        """Jittor版本的前向传播"""
+        (x2, x1, x0) = input
+        
+        fpn_out0 = self.reduce_layer0(x0)
+        upsample_feat0 = self.upsample0(fpn_out0)
+        f_concat_layer0 = jt.concat([upsample_feat0, x1], 1)
+        f_out0 = self.Rep_p4(f_concat_layer0)
+        
+        fpn_out1 = self.reduce_layer1(f_out0)
+        upsample_feat1 = self.upsample1(fpn_out1)
+        f_concat_layer1 = jt.concat([upsample_feat1, x2], 1)
+        pan_out2 = self.Rep_p3(f_concat_layer1)
+        
+        down_feat1 = self.downsample2(pan_out2)
+        p_concat_layer1 = jt.concat([down_feat1, fpn_out1], 1)
+        pan_out1 = self.Rep_n3(p_concat_layer1)
+        
+        down_feat0 = self.downsample1(pan_out1)
+        p_concat_layer2 = jt.concat([down_feat0, fpn_out0], 1)
+        pan_out0 = self.Rep_n4(p_concat_layer2)
+        
+        outputs = [pan_out2, pan_out1, pan_out0]
+        
+        return outputs
 
-# 为了兼容性，创建别名
-RepPAN = RepPANNeck
 
-def build_reppan_neck(channels_list, num_repeats, block, extra_cfg=None):
-    """构建RepPAN Neck的工厂函数"""
-    return RepPANNeck(channels_list, num_repeats, block, extra_cfg)
-
-# 导出所有需要的组件
-__all__ = ['RepPANNeck', 'RepPAN', 'build_reppan_neck']
+class CSPRepPANNeck(nn.Module):
+    """CSP-RepPAN
+    """
+    
+    def __init__(
+            self,
+            channels_list=None,
+            num_repeats=None,
+            block=RepVGGBlock,
+            csp_e=float(1) / 2,
+            extra_cfg=None
+    ):
+        super().__init__()
+        
+        assert channels_list is not None
+        assert num_repeats is not None
+        
+        self.Rep_p4 = BepC3(
+                in_channels=channels_list[3] + channels_list[5],
+                out_channels=channels_list[5],
+                n=num_repeats[5],
+                e=csp_e,
+                block=block,
+        )
+        
+        self.Rep_p3 = BepC3(
+                in_channels=channels_list[2] + channels_list[6],
+                out_channels=channels_list[6],
+                n=num_repeats[6],
+                e=csp_e,
+                block=block,
+        )
+        
+        self.Rep_n3 = BepC3(
+                in_channels=channels_list[6] + channels_list[7],
+                out_channels=channels_list[7],
+                n=num_repeats[7],
+                e=csp_e,
+                block=block,
+        )
+        
+        self.Rep_n4 = BepC3(
+                in_channels=channels_list[5] + channels_list[8],
+                out_channels=channels_list[8],
+                n=num_repeats[8],
+                e=csp_e,
+                block=block,
+        )
+        
+        self.reduce_layer0 = ConvWrapper(
+                in_channels=channels_list[4],
+                out_channels=channels_list[5],
+                kernel_size=1,
+                stride=1,
+        )
+        
+        self.upsample0 = nn.Upsample(scale_factor=2)
+        self.reduce_layer1 = ConvWrapper(
+                in_channels=channels_list[5],
+                out_channels=channels_list[6],
+                kernel_size=1,
+                stride=1,
+        )
+        
+        self.upsample1 = nn.Upsample(scale_factor=2)
+        self.downsample2 = ConvWrapper(
+                in_channels=channels_list[6],
+                out_channels=channels_list[7],
+                kernel_size=3,
+                stride=2,
+        )
+        
+        self.downsample1 = ConvWrapper(
+                in_channels=channels_list[7],
+                out_channels=channels_list[8],
+                kernel_size=3,
+                stride=2,
+        )
+    
+    def execute(self, input):
+        """Jittor版本的前向传播"""
+        (x2, x1, x0) = input
+        
+        fpn_out0 = self.reduce_layer0(x0)
+        upsample_feat0 = self.upsample0(fpn_out0)
+        f_concat_layer0 = jt.concat([upsample_feat0, x1], 1)
+        f_out0 = self.Rep_p4(f_concat_layer0)
+        
+        fpn_out1 = self.reduce_layer1(f_out0)
+        upsample_feat1 = self.upsample1(fpn_out1)
+        f_concat_layer1 = jt.concat([upsample_feat1, x2], 1)
+        pan_out2 = self.Rep_p3(f_concat_layer1)
+        
+        down_feat1 = self.downsample2(pan_out2)
+        p_concat_layer1 = jt.concat([down_feat1, fpn_out1], 1)
+        pan_out1 = self.Rep_n3(p_concat_layer1)
+        
+        down_feat0 = self.downsample1(pan_out1)
+        p_concat_layer2 = jt.concat([down_feat0, fpn_out0], 1)
+        pan_out0 = self.Rep_n4(p_concat_layer2)
+        
+        outputs = [pan_out2, pan_out1, pan_out0]
+        
+        return outputs

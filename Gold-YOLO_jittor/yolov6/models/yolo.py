@@ -1,336 +1,162 @@
-#!/usr/bin/env python3
+# 2023.09.18-Changed for yolo model of Gold-YOLO
+#            Huawei Technologies Co., Ltd. <foss@huawei.com>
+# !/usr/bin/env python3
 # -*- coding:utf-8 -*-
 """
-Gold-YOLO Model for Jittor - 完全对齐PyTorch版本
+GOLD-YOLO Jittor版本主模型文件
+从PyTorch版本迁移到Jittor框架
 """
 
-import jittor as jt
-from jittor import nn
 import math
-import numpy as np
+import jittor as jt
+import jittor.nn as nn
 
 from yolov6.layers.common import *
-from yolov6.models.effidehead import Detect, build_effidehead_layer
+from yolov6.utils.jittor_utils import initialize_weights
+from yolov6.models.efficientrep import *
+from yolov6.models.reppan import *
+from yolov6.utils.events import LOGGER
 
 
 class Model(nn.Module):
-    """Gold-YOLO model with backbone, neck and head - 完全对齐PyTorch版本"""
+    '''YOLOv6 model with backbone, neck and head.
+    The default parts are EfficientRep Backbone, Rep-PAN and
+    Efficient Decoupled Head.
+    '''
     
-    def __init__(self, config=None, channels=3, num_classes=80, fuse_ab=False, distill_ns=False):
+    def __init__(self, config, channels=3, num_classes=None, fuse_ab=False,
+                 distill_ns=False):  # model, input channels, number of classes
         super().__init__()
-        
-        # 配置文件处理 - 完全对齐PyTorch版本
-        if config is None:
-            # 默认配置 - 只包含检测头
-            self.backbone = None
-            self.neck = None
-
-            # 构建轻量级检测头 - 简化版本
-            channels_list = [256, 256, 256]  # 简化为3个尺度，每个256通道
-            num_layers = 3
-            reg_max = 0
-            use_dfl = False
-
-            # 使用轻量级检测头
-            from yolov6.models.lightweight_head import build_lightweight_head
-            self.detect = build_lightweight_head(
-                channels_list=channels_list,
-                num_anchors=1,
-                num_classes=num_classes,
-                reg_max=reg_max,
-                num_layers=num_layers,
-                ultra_light=True
-            )
-        elif isinstance(config, str):
-            # 严格按照PyTorch版本的Gold-YOLO-N配置
-            print(f"✅ 加载Gold-YOLO-N配置，严格对齐PyTorch版本: {config}")
-
-            # Gold-YOLO-N 配置 - 完全对齐PyTorch版本
-            config_dict = {
-                'type': 'GoldYOLO-n',
-                'depth_multiple': 0.33,  # nano版本关键参数
-                'width_multiple': 0.25,  # nano版本关键参数
-                'backbone': {
-                    'type': 'EfficientRep',
-                    'num_repeats': [1, 6, 12, 18, 6],
-                    'out_channels': [64, 128, 256, 512, 1024],
-                    'fuse_P2': True,
-                    'cspsppf': True
-                },
-                'neck': {
-                    'type': 'RepGDNeck',
-                    'num_repeats': [12, 12, 12, 12],
-                    'out_channels': [256, 128, 128, 256, 256, 512]
-                },
-                'head': {
-                    'type': 'EffiDeHead',
-                    'in_channels': [128, 256, 512],
-                    'num_layers': 3,
-                    'use_dfl': False,  # 对齐PyTorch版本
-                    'reg_max': 0      # 对齐PyTorch版本
-                }
-            }
-
-            # 构建完整的Gold-YOLO-N架构
-            print(f"🔧 构建完整的Gold-YOLO-N架构...")
-
-            # 构建精确对齐PyTorch的backbone (目标参数量: 3,144,890)
-            from yolov6.models.exact_pytorch_backbone import build_exact_pytorch_backbone_v2
-            self.backbone = build_exact_pytorch_backbone_v2(config_dict)
-
-            # 构建精确对齐PyTorch的neck (目标参数量: 2,074,259)
-            from yolov6.models.exact_pytorch_neck import build_exact_pytorch_neck
-            self.neck = build_exact_pytorch_neck(config_dict)
-
-            # 构建严格对齐PyTorch版本的检测头
-            channels_list = config_dict['head']['in_channels']  # [128, 256, 512]
-            num_layers = config_dict['head']['num_layers']      # 3
-            reg_max = config_dict['head']['reg_max']            # 0 (nano版本)
-            use_dfl = config_dict['head']['use_dfl']            # False (nano版本)
-
-            # 使用严格对齐PyTorch版本的检测头
-            from yolov6.models.aligned_head import build_aligned_head
-            self.detect = build_aligned_head(
-                channels_list=channels_list,
-                num_anchors=1,
-                num_classes=num_classes,
-                reg_max=reg_max,
-                num_layers=num_layers,
-                use_dfl=use_dfl
-            )
-
-            print(f"✅ Gold-YOLO-N配置加载完成:")
-            print(f"   depth_multiple: {config_dict['depth_multiple']}")
-            print(f"   width_multiple: {config_dict['width_multiple']}")
-            print(f"   head_channels: {channels_list}")
-            print(f"   use_dfl: {use_dfl}, reg_max: {reg_max}")
-        else:
-            # 完整配置对象
-            num_layers = config.model.head.num_layers
-            self.backbone, self.neck, self.detect = build_network(config, channels, num_classes, num_layers,
-                                                                  fuse_ab=fuse_ab, distill_ns=distill_ns)
+        # Build network
+        num_layers = config.model.head.num_layers
+        self.backbone, self.neck, self.detect = build_network(config, channels, num_classes, num_layers,
+                                                              fuse_ab=fuse_ab, distill_ns=distill_ns)
         
         # Init Detect head
-        if hasattr(self.detect, 'stride'):
-            self.stride = self.detect.stride
+        self.stride = self.detect.stride
         self.detect.initialize_biases()
         
         # Init weights
-        self.initialize_weights()
+        initialize_weights(self)
     
-    def forward(self, x):
-        """前向传播 - 完整的Gold-YOLO-N架构"""
-        if self.backbone is not None and self.neck is not None:
-            # 完整Gold-YOLO-N前向传播
-            print(f"🔍 完整Gold-YOLO-N前向传播:")
-            print(f"   输入: {x.shape}")
-
-            # Backbone特征提取
-            backbone_features = self.backbone(x)
-            print(f"   Backbone输出: {[f.shape for f in backbone_features]}")
-
-            # Neck特征融合
-            neck_features = self.neck(backbone_features)
-            print(f"   Neck输出: {[f.shape for f in neck_features]}")
-
-            # Head检测
-            detections = self.detect(neck_features)
-            print(f"   检测输出: {type(detections)}")
-
-            return detections
-        else:
-            # 简化版本 - 模拟特征提取
-            # Gold-YOLO-N 前向传播 - 严格对齐PyTorch版本
-            # 模拟Gold-YOLO-N的特征提取过程
-            B, C, H, W = x.shape
-
-            # 模拟多尺度特征图，严格按照Gold-YOLO-N的通道配置
-            # PyTorch版本: head.in_channels = [128, 256, 512]
-
-            # 8倍下采样特征 -> 128通道 (对齐PyTorch版本)
-            pool1 = jt.nn.AvgPool2d(8, 8)
-            feat1 = pool1(x)
-            conv1 = jt.nn.Conv2d(C, 128, 1, bias=False)  # 输出128通道
-            feat1 = conv1(feat1)
-
-            # 16倍下采样特征 -> 256通道 (对齐PyTorch版本)
-            pool2 = jt.nn.AvgPool2d(16, 16)
-            feat2 = pool2(x)
-            conv2 = jt.nn.Conv2d(C, 256, 1, bias=False)  # 输出256通道
-            feat2 = conv2(feat2)
-
-            # 32倍下采样特征 -> 512通道 (对齐PyTorch版本)
-            pool3 = jt.nn.AvgPool2d(32, 32)
-            feat3 = pool3(x)
-            conv3 = jt.nn.Conv2d(C, 512, 1, bias=False)  # 输出512通道
-            feat3 = conv3(feat3)
-
-            features = [feat1, feat2, feat3]  # [128, 256, 512] 严格对齐
-            return self.detect(features)
-
     def execute(self, x):
-        """Jittor执行方法 - 调用forward"""
-        return self.forward(x)
+        """Jittor版本的前向传播，使用execute替代forward"""
+        # Jittor不支持ONNX导出检查，简化逻辑
+        export_mode = False
+        x = self.backbone(x)
+        x = self.neck(x)
+        if export_mode == False:
+            featmaps = []
+            featmaps.extend(x)
+        x = self.detect(x)
+        return x if export_mode is True else [x, featmaps]
     
-    def initialize_weights(self):
-        """初始化权重 - 对齐PyTorch版本"""
-        for m in self.modules():
-            t = type(m)
-            if t is nn.Conv2d:
-                pass  # Jittor会自动初始化
-            elif t is nn.BatchNorm2d:
-                m.eps = 1e-3
-                m.momentum = 0.03
-            elif t in [nn.LeakyReLU, nn.ReLU, nn.SiLU]:
-                # Jittor没有Hardswish和ReLU6，跳过这些
-                if hasattr(m, 'inplace'):
-                    m.inplace = True
+    def _apply(self, fn):
+        """Jittor版本的_apply方法"""
+        self = super()._apply(fn)
+        self.detect.stride = fn(self.detect.stride)
+        self.detect.grid = list(map(fn, self.detect.grid))
+        return self
+
+
+def make_divisible(x, divisor):
+    """Upward revision the value x to make it evenly divisible by the divisor."""
+    return math.ceil(x / divisor) * divisor
 
 
 def build_network(config, channels, num_classes, num_layers, fuse_ab=False, distill_ns=False):
-    """构建完整网络 - 完整实现，与PyTorch版本对齐"""
-    # 导入完整的backbone和neck组件
-    from yolov6.layers.common import (
-        Conv, RepVGGBlock, RepBlock, BepC3, SimSPPF, SPPF,
-        EfficientRep, RepPAN, EffiDeHead, Detect
-    )
-
-    # 获取配置参数
-    depth_mul = getattr(config.model, 'depth_multiple', 1.0)
-    width_mul = getattr(config.model, 'width_multiple', 1.0)
-
-    # 构建backbone
-    backbone_cfg = config.model.backbone
-    backbone = build_backbone(backbone_cfg, channels, depth_mul, width_mul)
-
-    # 构建neck
-    neck_cfg = config.model.neck
-    neck = build_neck(neck_cfg, backbone.out_channels, depth_mul, width_mul)
-
-    # 构建head
-    head_cfg = config.model.head
-    use_dfl = head_cfg.use_dfl
-    reg_max = head_cfg.reg_max
-
-    # 获取neck的输出通道
-    neck_out_channels = neck.out_channels if hasattr(neck, 'out_channels') else [256, 512, 1024]
-
-    # 构建完整的通道列表
-    channels_list = [0, 0, 0, 0, 0, 0] + neck_out_channels + [0] * (11 - 6 - len(neck_out_channels))
-
-    head_layers = build_effidehead_layer(channels_list, 1, num_classes, reg_max=reg_max, num_layers=num_layers)
-    head = Detect(num_classes, num_layers, head_layers=head_layers, use_dfl=use_dfl, reg_max=reg_max)
-
+    """构建网络的主函数，从配置文件构建backbone、neck和head"""
+    depth_mul = config.model.depth_multiple
+    width_mul = config.model.width_multiple
+    num_repeat_backbone = config.model.backbone.num_repeats
+    channels_list_backbone = config.model.backbone.out_channels
+    fuse_P2 = config.model.backbone.get('fuse_P2')
+    cspsppf = config.model.backbone.get('cspsppf')
+    num_repeat_neck = config.model.neck.num_repeats
+    channels_list_neck = config.model.neck.out_channels
+    use_dfl = config.model.head.use_dfl
+    reg_max = config.model.head.reg_max
+    num_repeat = [(max(round(i * depth_mul), 1) if i > 1 else i) for i in (num_repeat_backbone + num_repeat_neck)]
+    channels_list = [make_divisible(i * width_mul, 8) for i in (channels_list_backbone + channels_list_neck)]
+    
+    # 获取backbone和neck的额外配置
+    block = get_block(config.model.backbone.type)
+    BACKBONE = eval(config.model.backbone.type)
+    NECK = eval(config.model.neck.type)
+    neck_extra_cfg = getattr(config.model.neck, 'extra_cfg', None)
+    
+    if 'CSP' in config.model.backbone.type:
+        backbone = BACKBONE(
+                in_channels=channels,
+                channels_list=channels_list,
+                num_repeats=num_repeat,
+                block=block,
+                csp_e=config.model.backbone.csp_e,
+                fuse_P2=fuse_P2,
+                cspsppf=cspsppf
+        )
+        
+        neck = NECK(
+                channels_list=channels_list,
+                num_repeats=num_repeat,
+                block=block,
+                csp_e=config.model.neck.csp_e,
+                extra_cfg=neck_extra_cfg
+        )
+    else:
+        backbone = BACKBONE(
+                in_channels=channels,
+                channels_list=channels_list,
+                num_repeats=num_repeat,
+                block=block,
+                fuse_P2=fuse_P2,
+                cspsppf=cspsppf
+        )
+        
+        neck = NECK(
+                channels_list=channels_list,
+                num_repeats=num_repeat,
+                block=block,
+                extra_cfg=neck_extra_cfg
+        )
+    
+    # 构建检测头
+    if distill_ns:
+        from yolov6.models.heads.effidehead_distill_ns import Detect, build_effidehead_layer
+        if num_layers != 3:
+            LOGGER.error('ERROR in: Distill mode not fit on n/s models with P6 head.\n')
+            exit()
+        head_layers = build_effidehead_layer(channels_list, 1, num_classes, reg_max=reg_max)
+        head = Detect(num_classes, num_layers, head_layers=head_layers, use_dfl=use_dfl)
+    
+    elif fuse_ab:
+        from yolov6.models.heads.effidehead_fuseab import Detect, build_effidehead_layer
+        anchors_init = config.model.head.anchors_init
+        head_layers = build_effidehead_layer(channels_list, 3, num_classes, reg_max=reg_max, num_layers=num_layers)
+        head = Detect(num_classes, anchors_init, num_layers, head_layers=head_layers, use_dfl=use_dfl)
+    
+    else:
+        from yolov6.models.effidehead import Detect, build_effidehead_layer
+        head_layers = build_effidehead_layer(channels_list, 1, num_classes, reg_max=reg_max, num_layers=num_layers)
+        head = Detect(num_classes, num_layers, head_layers=head_layers, use_dfl=use_dfl)
+    
     return backbone, neck, head
 
 
-def build_backbone(backbone_cfg, channels, depth_mul, width_mul):
-    """构建backbone - 完整实现"""
-    backbone_type = backbone_cfg.type
-
-    if backbone_type == 'EfficientRep':
-        from real_backbone_validation import EfficientRep, RepVGGBlock
-
-        # EfficientRep配置
-        channels_list = [64, 128, 256, 512, 1024]
-        num_repeats = [1, 6, 12, 18, 6]
-
-        # 应用宽度和深度倍数
-        channels_list = [int(c * width_mul) for c in channels_list]
-        num_repeats = [max(1, int(r * depth_mul)) for r in num_repeats]
-
-        backbone = EfficientRep(
-            in_channels=channels,
-            channels_list=channels_list,
-            num_repeats=num_repeats,
-            block=RepVGGBlock,
-            fuse_P2=False,
-            cspsppf=False
-        )
-
-        # 设置输出通道
-        backbone.out_channels = channels_list[-3:]  # 取最后3个特征层
-
-        return backbone
+def get_block(block_name):
+    """根据block名称获取对应的block类"""
+    if block_name == 'RepVGGBlock':
+        from yolov6.layers.common import RepVGGBlock
+        return RepVGGBlock
+    elif block_name == 'ConvWrapper':
+        from yolov6.layers.common import ConvWrapper
+        return ConvWrapper
     else:
-        raise NotImplementedError(f"Backbone type {backbone_type} not implemented")
+        raise NotImplementedError(f"Block {block_name} not implemented")
 
 
-def build_neck(neck_cfg, backbone_out_channels, depth_mul, width_mul):
-    """构建neck - 完整实现"""
-    neck_type = neck_cfg.type
-
-    if neck_type == 'RepPAN':
-        # 简化的RepPAN实现
-        class SimpleRepPANNeck(nn.Module):
-            def __init__(self, in_channels, out_channels):
-                super().__init__()
-                self.in_channels = in_channels
-                self.out_channels = out_channels
-
-                # 简单的特征融合层
-                self.lateral_convs = nn.ModuleList([
-                    nn.Conv2d(in_ch, out_ch, 1, 1, 0)
-                    for in_ch, out_ch in zip(in_channels, out_channels)
-                ])
-
-            def forward(self, features):
-                # 简单的特征融合
-                outputs = []
-                for i, (feat, conv) in enumerate(zip(features, self.lateral_convs)):
-                    outputs.append(conv(feat))
-                return outputs
-
-        neck = SimpleRepPANNeck(
-            in_channels=backbone_out_channels,
-            out_channels=[256, 512, 1024]
-        )
-
-        # 设置输出通道
-        neck.out_channels = [256, 512, 1024]
-
-        return neck
-    else:
-        raise NotImplementedError(f"Neck type {neck_type} not implemented")
-
-
-def build_model(cfg=None, num_classes=80, fuse_ab=False, distill_ns=False):
-    """构建模型 - 对齐PyTorch版本"""
+def build_model(cfg, num_classes, device, fuse_ab=False, distill_ns=False):
+    """构建完整模型的函数"""
     model = Model(cfg, channels=3, num_classes=num_classes, fuse_ab=fuse_ab, distill_ns=distill_ns)
+    # Jittor中不需要.to(device)，会自动处理设备
     return model
-
-
-class SimpleConfig:
-    """简化的配置类 - 用于测试"""
-    def __init__(self):
-        self.model = SimpleModelConfig()
-
-
-class SimpleModelConfig:
-    """完整的模型配置 - 与PyTorch版本对齐"""
-    def __init__(self):
-        self.backbone = SimpleBackboneConfig()
-        self.neck = SimpleNeckConfig()
-        self.head = SimpleHeadConfig()
-        self.depth_multiple = 1.0
-        self.width_multiple = 1.0
-
-
-class SimpleBackboneConfig:
-    """Backbone配置"""
-    def __init__(self):
-        self.type = 'EfficientRep'
-
-
-class SimpleNeckConfig:
-    """Neck配置"""
-    def __init__(self):
-        self.type = 'RepPAN'
-
-
-class SimpleHeadConfig:
-    """检测头配置"""
-    def __init__(self):
-        self.num_layers = 3
-        self.use_dfl = True
-        self.reg_max = 16

@@ -1,191 +1,163 @@
-#!/usr/bin/env python3
-# -*- coding:utf-8 -*-
 """
-ATSS Assigner for Jittor - 简化但功能完整的实现
+GOLD-YOLO Jittor版本 - ATSS分配器
+从PyTorch版本迁移到Jittor框架，严格对齐所有功能
 """
 
 import jittor as jt
-from jittor import nn
-import math
-import numpy as np
-
-from yolov6.utils.general import box_iou, xywh2xyxy
+import jittor.nn as nn
+from yolov6.assigners.iou2d_calculator import iou2d_calculator
+from yolov6.assigners.assigner_utils import dist_calculator, select_candidates_in_gts, select_highest_overlaps, iou_calculator
 
 
 class ATSSAssigner(nn.Module):
-    """ATSS分配器 - 简化但功能完整的Jittor实现"""
-    
-    def __init__(self, topk=9, num_classes=80):
-        super().__init__()
+    '''Adaptive Training Sample Selection Assigner'''
+    def __init__(self,
+                 topk=9,
+                 num_classes=80):
+        super(ATSSAssigner, self).__init__()
         self.topk = topk
         self.num_classes = num_classes
-    
-    def __call__(self, anchors, n_anchors_list, gt_labels, gt_bboxes, mask_gt, pred_bboxes):
-        """ATSS分配算法"""
-        # 修复输入形状不匹配问题
-        if pred_bboxes.ndim == 4 and pred_bboxes.shape[1] == 1:
-            # 从[batch, 1, n_anchors, 4]变为[batch, n_anchors, 4]
-            pred_bboxes = pred_bboxes.squeeze(1)
+        self.bg_idx = num_classes
 
-        batch_size = gt_labels.shape[0]
-        n_max_boxes = gt_labels.shape[1]
-        
-        if n_max_boxes == 0:
-            device = gt_bboxes.device if hasattr(gt_bboxes, 'device') else 'cpu'
-            return (jt.full_like(anchors[:, 0], self.num_classes).long(),
-                    jt.zeros_like(anchors),
-                    jt.zeros_like(anchors[:, 0]),
-                    jt.zeros_like(anchors[:, 0]).bool())
-        
-        n_anchors = anchors.shape[0]
-        
-        # 初始化输出
-        assigned_labels = jt.full((batch_size, n_anchors), self.num_classes, dtype=jt.int64)
-        assigned_bboxes = jt.zeros((batch_size, n_anchors, 4))
-        assigned_scores = jt.zeros((batch_size, n_anchors))
-        fg_mask = jt.zeros((batch_size, n_anchors), dtype=jt.bool)
-        
-        # 简化的ATSS分配策略
-        for batch_idx in range(batch_size):
-            # 修复数值转换，避免item()错误
-            num_gt_tensor = mask_gt[batch_idx].sum()
-            if num_gt_tensor.numel() == 1:
-                num_gt = int(num_gt_tensor.item())
-            else:
-                num_gt = int(num_gt_tensor.data[0])
+    def execute(self,
+                anc_bboxes,
+                n_level_bboxes,
+                gt_labels,
+                gt_bboxes,
+                mask_gt,
+                pd_bboxes):
+        r"""This code is based on
+            https://github.com/fcjian/TOOD/blob/master/mmdet/core/bbox/assigners/atss_assigner.py
 
-            if num_gt == 0:
-                continue
-            
-            # 获取有效的GT
-            gt_bbox = gt_bboxes[batch_idx][:num_gt]  # [num_gt, 4]
-            gt_label = gt_labels[batch_idx][:num_gt]  # [num_gt, 1]
-            
-            # 计算anchor中心点
-            anchor_centers = (anchors[:, :2] + anchors[:, 2:]) / 2  # [n_anchors, 2]
-            
-            # 计算GT中心点
-            gt_centers = (gt_bbox[:, :2] + gt_bbox[:, 2:]) / 2  # [num_gt, 2]
-            
-            # 计算距离（修复Jittor兼容性）
-            # 手动实现cdist功能
-            anchor_centers_expanded = anchor_centers.unsqueeze(1)  # [n_anchors, 1, 2]
-            gt_centers_expanded = gt_centers.unsqueeze(0)  # [1, num_gt, 2]
-            distances = jt.sqrt(((anchor_centers_expanded - gt_centers_expanded) ** 2).sum(dim=-1))  # [n_anchors, num_gt]
-            
-            # 为每个GT选择topk个最近的anchor
-            _, topk_indices = jt.topk(distances, self.topk, dim=0, largest=False)  # [topk, num_gt]
-            
-            # 计算IoU
-            anchor_boxes = anchors  # [n_anchors, 4]
-            gt_boxes = gt_bbox  # [num_gt, 4]
-            
-            # 扩展维度进行IoU计算
-            anchor_boxes_expanded = anchor_boxes.unsqueeze(1)  # [n_anchors, 1, 4]
-            gt_boxes_expanded = gt_boxes.unsqueeze(0)  # [1, num_gt, 4]
-            
-            # 简化的IoU计算
-            ious = self.compute_iou(anchor_boxes_expanded, gt_boxes_expanded)  # [n_anchors, num_gt]
-            
-            # 为每个GT分配anchor
-            for gt_idx in range(num_gt):
-                # 获取候选anchor
-                candidate_indices = topk_indices[:, gt_idx]  # [topk]
-                # 修复索引操作，避免getitem错误
-                candidate_ious = jt.gather(ious[:, gt_idx], 0, candidate_indices)  # [topk]
-                
-                # 计算IoU阈值
-                iou_mean = candidate_ious.mean()
-                iou_std = candidate_ious.std()
-                iou_threshold = iou_mean + iou_std
-                
-                # 选择正样本
-                positive_mask = candidate_ious >= iou_threshold
-                # 修复索引操作，避免getitem错误
-                positive_count = positive_mask.sum()
-                if positive_count.numel() == 1:
-                    has_positive = positive_count.item() > 0
-                else:
-                    has_positive = positive_count.data[0] > 0
+        Args:
+            anc_bboxes (Tensor): shape(num_total_anchors, 4)
+            n_level_bboxes (List):len(3)
+            gt_labels (Tensor): shape(bs, n_max_boxes, 1)
+            gt_bboxes (Tensor): shape(bs, n_max_boxes, 4)
+            mask_gt (Tensor): shape(bs, n_max_boxes, 1)
+            pd_bboxes (Tensor): shape(bs, n_max_boxes, 4)
+        Returns:
+            target_labels (Tensor): shape(bs, num_total_anchors)
+            target_bboxes (Tensor): shape(bs, num_total_anchors, 4)
+            target_scores (Tensor): shape(bs, num_total_anchors, num_classes)
+            fg_mask (Tensor): shape(bs, num_total_anchors)
+        """
+        self.n_anchors = anc_bboxes.size(0)
+        self.bs = gt_bboxes.size(0)
+        self.n_max_boxes = gt_bboxes.size(1)
 
-                if has_positive:
-                    # 使用简单的循环方式避免复杂索引（修复item()错误）
-                    positive_indices_list = []
-                    positive_mask_np = positive_mask.data  # 转换为numpy数组避免item()调用
-                    candidate_indices_np = candidate_indices.data  # 转换为numpy数组
-                    num_candidates = candidate_indices.shape[0]  # 使用shape避免len()
-                    for k in range(num_candidates):
-                        if bool(positive_mask_np[k]):  # 显式转换为bool
-                            # 使用numpy数组访问，然后转换为Jittor标量
-                            idx_val = int(candidate_indices_np[k])
-                            positive_indices_list.append(jt.array(idx_val))
+        if self.n_max_boxes == 0:
+            return jt.full([self.bs, self.n_anchors], self.bg_idx), \
+                   jt.zeros([self.bs, self.n_anchors, 4]), \
+                   jt.zeros([self.bs, self.n_anchors, self.num_classes]), \
+                   jt.zeros([self.bs, self.n_anchors])
 
-                    if positive_indices_list:
-                        positive_indices = jt.stack(positive_indices_list)
-                    else:
-                        positive_indices = jt.array([], dtype=jt.int64)
-                else:
-                    positive_indices = jt.array([], dtype=jt.int64)
-                
-                # 修复len()判断，避免numpy数组布尔判断
-                if positive_indices.numel() > 0:
-                    # 转换positive_indices为numpy数组以避免迭代问题
-                    positive_indices_np = positive_indices.data
+        overlaps = iou2d_calculator(gt_bboxes.reshape([-1, 4]), anc_bboxes)
+        overlaps = overlaps.reshape([self.bs, -1, self.n_anchors])
 
-                    # 分配标签（修复索引操作和item()错误）
-                    label_val = gt_label[gt_idx]
-                    if label_val.numel() == 1:
-                        label_val = label_val.item()
-                    else:
-                        # 如果不是标量，先squeeze再检查
-                        label_val = label_val.squeeze()
-                        if hasattr(label_val, 'numel') and label_val.numel() == 1:
-                            label_val = label_val.item()
-                        else:
-                            # 最后的备选方案
-                            label_val = int(label_val.data[0]) if hasattr(label_val, 'data') else int(label_val)
+        distances, ac_points = dist_calculator(gt_bboxes.reshape([-1, 4]), anc_bboxes)
+        distances = distances.reshape([self.bs, -1, self.n_anchors])
 
-                    # 逐个分配，避免索引错误
-                    for i in range(len(positive_indices_np)):
-                        idx = int(positive_indices_np[i])
-                        assigned_labels[batch_idx, idx] = int(label_val)
-                        assigned_bboxes[batch_idx, idx] = gt_bbox[gt_idx]
-                        fg_mask[batch_idx, idx] = True
+        is_in_candidate, candidate_idxs = self.select_topk_candidates(
+            distances, n_level_bboxes, mask_gt)
 
-                    # 分配分数（修复索引操作和item()错误）
-                    positive_scores_list = []
-                    candidate_ious_np = candidate_ious.data  # 转换为numpy数组
-                    num_candidates = candidate_ious.shape[0]  # 使用shape避免len()
-                    for k in range(num_candidates):
-                        if bool(positive_mask_np[k]):  # 显式转换为bool
-                            # 使用numpy数组访问，然后转换为Jittor标量
-                            score_val = float(candidate_ious_np[k])
-                            positive_scores_list.append(jt.array(score_val))
+        overlaps_thr_per_gt, iou_candidates = self.thres_calculator(
+            is_in_candidate, candidate_idxs, overlaps)
 
-                    for i in range(len(positive_indices_np)):
-                        if i < len(positive_scores_list):
-                            idx = int(positive_indices_np[i])
-                            assigned_scores[batch_idx, idx] = positive_scores_list[i]
-        
-        return assigned_labels, assigned_bboxes, assigned_scores, fg_mask
-    
-    def compute_iou(self, boxes1, boxes2):
-        """计算IoU - 简化实现"""
-        # boxes1: [n_anchors, 1, 4]
-        # boxes2: [1, num_gt, 4]
-        
-        # 计算交集
-        lt = jt.maximum(boxes1[..., :2], boxes2[..., :2])  # [n_anchors, num_gt, 2]
-        rb = jt.minimum(boxes1[..., 2:], boxes2[..., 2:])  # [n_anchors, num_gt, 2]
-        
-        wh = (rb - lt).clamp(min_v=0)  # [n_anchors, num_gt, 2]
-        inter = wh[..., 0] * wh[..., 1]  # [n_anchors, num_gt]
-        
-        # 计算面积
-        area1 = (boxes1[..., 2] - boxes1[..., 0]) * (boxes1[..., 3] - boxes1[..., 1])  # [n_anchors, 1]
-        area2 = (boxes2[..., 2] - boxes2[..., 0]) * (boxes2[..., 3] - boxes2[..., 1])  # [1, num_gt]
-        
-        union = area1 + area2 - inter  # [n_anchors, num_gt]
-        
-        iou = inter / (union + 1e-6)  # [n_anchors, num_gt]
-        return iou
+        # select candidates iou >= threshold as positive
+        is_pos = jt.where(
+            iou_candidates > overlaps_thr_per_gt.repeat([1, 1, self.n_anchors]),
+            is_in_candidate, jt.zeros_like(is_in_candidate))
+
+        is_in_gts = select_candidates_in_gts(ac_points, gt_bboxes)
+        mask_pos = is_pos * is_in_gts * mask_gt
+
+        target_gt_idx, fg_mask, mask_pos = select_highest_overlaps(
+            mask_pos, overlaps, self.n_max_boxes)
+
+        # assigned target
+        target_labels, target_bboxes, target_scores = self.get_targets(
+            gt_labels, gt_bboxes, target_gt_idx, fg_mask)
+
+        # soft label with iou
+        if pd_bboxes is not None:
+            ious = iou_calculator(gt_bboxes, pd_bboxes) * mask_pos
+            ious = ious.max(dim=-2)[0].unsqueeze(-1)
+            target_scores *= ious
+
+        return target_labels.long(), target_bboxes, target_scores, fg_mask.bool()
+
+    def select_topk_candidates(self,
+                               distances,
+                               n_level_bboxes,
+                               mask_gt):
+
+        mask_gt = mask_gt.repeat(1, 1, self.topk).bool()
+        level_distances = jt.split(distances, n_level_bboxes, dim=-1)
+        is_in_candidate_list = []
+        candidate_idxs = []
+        start_idx = 0
+        for per_level_distances, per_level_boxes in zip(level_distances, n_level_bboxes):
+
+            end_idx = start_idx + per_level_boxes
+            selected_k = min(self.topk, per_level_boxes)
+            _, per_level_topk_idxs = per_level_distances.topk(selected_k, dim=-1, largest=False)
+            candidate_idxs.append(per_level_topk_idxs + start_idx)
+            per_level_topk_idxs = jt.where(mask_gt,
+                per_level_topk_idxs, jt.zeros_like(per_level_topk_idxs))
+            is_in_candidate = nn.one_hot(per_level_topk_idxs, per_level_boxes).sum(dim=-2)
+            is_in_candidate = jt.where(is_in_candidate > 1,
+                jt.zeros_like(is_in_candidate), is_in_candidate)
+            is_in_candidate_list.append(is_in_candidate.astype(distances.dtype))
+            start_idx = end_idx
+
+        is_in_candidate_list = jt.concat(is_in_candidate_list, dim=-1)
+        candidate_idxs = jt.concat(candidate_idxs, dim=-1)
+
+        return is_in_candidate_list, candidate_idxs
+
+    def thres_calculator(self,
+                         is_in_candidate,
+                         candidate_idxs,
+                         overlaps):
+
+        n_bs_max_boxes = self.bs * self.n_max_boxes
+        _candidate_overlaps = jt.where(is_in_candidate > 0,
+            overlaps, jt.zeros_like(overlaps))
+        candidate_idxs = candidate_idxs.reshape([n_bs_max_boxes, -1])
+        assist_idxs = self.n_anchors * jt.arange(n_bs_max_boxes)
+        assist_idxs = assist_idxs[:,None]
+        faltten_idxs = candidate_idxs + assist_idxs
+        candidate_overlaps = _candidate_overlaps.reshape(-1)[faltten_idxs]
+        candidate_overlaps = candidate_overlaps.reshape([self.bs, self.n_max_boxes, -1])
+
+        overlaps_mean_per_gt = candidate_overlaps.mean(dim=-1, keepdim=True)
+        overlaps_std_per_gt = candidate_overlaps.std(dim=-1, keepdim=True)
+        overlaps_thr_per_gt = overlaps_mean_per_gt + overlaps_std_per_gt
+
+        return overlaps_thr_per_gt, _candidate_overlaps
+
+    def get_targets(self,
+                    gt_labels,
+                    gt_bboxes,
+                    target_gt_idx,
+                    fg_mask):
+
+        # assigned target labels
+        batch_idx = jt.arange(self.bs, dtype=gt_labels.dtype)
+        batch_idx = batch_idx[...,None]
+        target_gt_idx = (target_gt_idx + batch_idx * self.n_max_boxes).long()
+        target_labels = gt_labels.flatten()[target_gt_idx.flatten()]
+        target_labels = target_labels.reshape([self.bs, self.n_anchors])
+        target_labels = jt.where(fg_mask > 0,
+            target_labels, jt.full_like(target_labels, self.bg_idx))
+
+        # assigned target boxes
+        target_bboxes = gt_bboxes.reshape([-1, 4])[target_gt_idx.flatten()]
+        target_bboxes = target_bboxes.reshape([self.bs, self.n_anchors, 4])
+
+        # assigned target scores
+        target_scores = nn.one_hot(target_labels.long(), self.num_classes + 1).float()
+        target_scores = target_scores[:, :, :self.num_classes]
+
+        return target_labels, target_bboxes, target_scores

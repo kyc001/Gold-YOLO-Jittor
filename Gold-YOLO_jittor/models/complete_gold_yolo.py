@@ -73,36 +73,42 @@ class SPPF(nn.Module):
 
 
 class CompleteBackbone(nn.Module):
-    """完整的骨干网络 - 提升特征提取能力"""
-    def __init__(self, c1=3, c2=1024):
+    """完整的骨干网络 - 支持通道缩放"""
+    def __init__(self, c1=3, channels=None):
         super().__init__()
-        
+
+        # 默认通道配置
+        if channels is None:
+            channels = [64, 128, 256, 512, 1024]
+
+        c2, c3, c4, c5, c6 = channels
+
         # Stem
-        self.stem = ConvBNSiLU(c1, 64, 6, 2, 2)
-        
+        self.stem = ConvBNSiLU(c1, c2, 6, 2, 2)
+
         # Stage 1
         self.stage1 = nn.Sequential(
-            ConvBNSiLU(64, 128, 3, 2, 1),
-            BottleneckCSP(128, 128, 3)
+            ConvBNSiLU(c2, c3, 3, 2, 1),
+            BottleneckCSP(c3, c3, 3)
         )
-        
-        # Stage 2  
+
+        # Stage 2
         self.stage2 = nn.Sequential(
-            ConvBNSiLU(128, 256, 3, 2, 1),
-            BottleneckCSP(256, 256, 6)
+            ConvBNSiLU(c3, c4, 3, 2, 1),
+            BottleneckCSP(c4, c4, 6)
         )
-        
+
         # Stage 3
         self.stage3 = nn.Sequential(
-            ConvBNSiLU(256, 512, 3, 2, 1),
-            BottleneckCSP(512, 512, 9)
+            ConvBNSiLU(c4, c5, 3, 2, 1),
+            BottleneckCSP(c5, c5, 9)
         )
-        
+
         # Stage 4
         self.stage4 = nn.Sequential(
-            ConvBNSiLU(512, 1024, 3, 2, 1),
-            BottleneckCSP(1024, 1024, 3),
-            SPPF(1024, 1024)
+            ConvBNSiLU(c5, c6, 3, 2, 1),
+            BottleneckCSP(c6, c6, 3),
+            SPPF(c6, c6)
         )
     
     def execute(self, x):
@@ -161,18 +167,31 @@ class CompleteNeck(nn.Module):
 class CompleteGoldYOLO(nn.Module):
     """完整的Gold-YOLO模型 - 解决损失值偏大问题"""
     
-    def __init__(self, num_classes=20, channels=3):
+    def __init__(self, num_classes=20, channels=3, width_multiple=1.0, depth_multiple=1.0):
         super().__init__()
-        
-        # 完整的backbone
-        self.backbone = CompleteBackbone(c1=channels)
-        
-        # 完整的neck
-        self.neck = CompleteNeck(in_channels=[256, 512, 1024], out_channels=256)
-        
-        # 简化的检测头
-        self.detect = SimpleDetectHead(num_classes=num_classes, in_channels=256)
-        
+        self.width_multiple = width_multiple
+        self.depth_multiple = depth_multiple
+
+        # 基础通道配置
+        base_channels = [64, 128, 256, 512, 1024]
+        # 应用width_multiple缩放
+        scaled_channels = [max(round(c * width_multiple), 1) for c in base_channels]
+
+        print(f'   原始通道: {base_channels}')
+        print(f'   缩放通道: {scaled_channels}')
+        print(f'   缩放系数: width={width_multiple}, depth={depth_multiple}')
+
+        # 使用缩放后的通道数创建backbone
+        self.backbone = CompleteBackbone(c1=channels, channels=scaled_channels)
+
+        # 使用缩放后的通道数创建neck
+        neck_in_channels = scaled_channels[-3:]  # [256, 512, 1024] -> 缩放后
+        neck_out_channels = max(round(256 * width_multiple), 1)
+        self.neck = CompleteNeck(in_channels=neck_in_channels, out_channels=neck_out_channels)
+
+        # 使用缩放后的通道数创建检测头
+        self.detect = SimpleDetectHead(num_classes=num_classes, in_channels=neck_out_channels)
+
         # 初始化权重
         self.initialize_weights()
     
@@ -266,6 +285,50 @@ def create_complete_model(num_classes=20):
     print(f'   参数量: {total_params/1e6:.2f}M')
     print(f'   架构: 完整backbone + neck + head')
     
+    return model
+
+
+def create_gold_yolo_model(config_name='gold_yolo-n', num_classes=20):
+    """根据配置名称创建GOLD-YOLO模型，正确应用缩放参数"""
+    print(f'🏗️ 创建{config_name}模型...')
+
+    # 根据配置名称设置缩放参数
+    if 'n' in config_name:
+        # GOLD-YOLO-n配置: width_multiple=0.25, depth_multiple=0.33
+        width_multiple = 0.25
+        depth_multiple = 0.33
+    elif 's' in config_name:
+        # GOLD-YOLO-s配置: width_multiple=0.50, depth_multiple=0.33
+        width_multiple = 0.50
+        depth_multiple = 0.33
+    elif 'm' in config_name:
+        # GOLD-YOLO-m配置: width_multiple=0.75, depth_multiple=0.60
+        width_multiple = 0.75
+        depth_multiple = 0.60
+    elif 'l' in config_name:
+        # GOLD-YOLO-l配置: width_multiple=1.0, depth_multiple=1.0
+        width_multiple = 1.0
+        depth_multiple = 1.0
+    else:
+        # 默认使用n配置
+        width_multiple = 0.25
+        depth_multiple = 0.33
+
+    # 应用缩放参数创建模型
+    model = CompleteGoldYOLO(
+        num_classes=num_classes,
+        width_multiple=width_multiple,
+        depth_multiple=depth_multiple
+    )
+
+    # 计算参数量
+    total_params = sum(p.numel() for p in model.parameters())
+
+    print(f'✅ {config_name}模型创建成功')
+    print(f'   参数量: {total_params/1e6:.2f}M')
+    print(f'   缩放参数: width={width_multiple}, depth={depth_multiple}')
+    print(f'   架构: 缩放后的backbone + neck + head')
+
     return model
 
 
