@@ -192,3 +192,14 @@ cd /home/kyc/project/GOLD-YOLO/Gold-YOLO_jittor && conda activate jt && python t
 
 
 接下来，清理jittor版本内无用脚本，清理完，使用转换工具转换pytorch版本权重，然后用jittor版代码加载推理测试评估可视化
+
+
+
+用转换后的权重加载，测试这十张照片，检测准确率/home/kyc/project/GOLD-YOLO/Gold-YOLO_pytorch/runs/inference/gold_yolo_n_test/test_images，如果准确率很低，说明转换逻辑以及模型架构设计不对，继续根据模型权重修复jittor版本模型架构，重新转换，检测，直到有一定准确率为止
+
+
+我有几个问题：
+权重覆盖率和参数匹配率不一样吗？
+可以看出，pytorch版权重/home/kyc/project/GOLD-YOLO/Gold-YOLO_pytorch/runs/train/gold_yolo_n_improved使用pytorch脚本推理测试后的结果还是有一定准确率的，说明权重本身是对的，而转换到jittor版后加载却出问题了，说明jittor版本架构或者转换脚本出了问题！！请深入修复！！
+
+你别乱讲，pytorch版权重/home/kyc/project/GOLD-YOLO/Gold-YOLO_pytorch/runs/train/gold_yolo_n_improved使用pytorch脚本推理测试后的结果还是有一定准确率的，说明模型以及权重本身是对的

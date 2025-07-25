@@ -1,0 +1,303 @@
+{
+  "model_name": "Gold-YOLO",
+  "backbone": {
+    "stem": {
+      "name": "stem",
+      "conv_layers": [],
+      "bn_layers": [],
+      "total_params": 0,
+      "description": "0\u4e2a\u5377\u79ef\u5c42, 0\u4e2aBN\u5c42, 0\u4e2a\u53c2\u6570"
+    },
+    "erblocks": {
+      "ERBlock_2": {
+        "name": "ERBlock_2",
+        "layers": [
+          {
+            "name": "0",
+            "params": []
+          },
+          {
+            "name": "1",
+            "params": []
+          }
+        ],
+        "total_params": 0,
+        "description": "\u6b8b\u5dee\u5757, 2\u5c42, 0\u4e2a\u53c2\u6570"
+      },
+      "ERBlock_3": {
+        "name": "ERBlock_3",
+        "layers": [
+          {
+            "name": "0",
+            "params": []
+          },
+          {
+            "name": "1",
+            "params": []
+          }
+        ],
+        "total_params": 0,
+        "description": "\u6b8b\u5dee\u5757, 2\u5c42, 0\u4e2a\u53c2\u6570"
+      },
+      "ERBlock_4": {
+        "name": "ERBlock_4",
+        "layers": [
+          {
+            "name": "0",
+            "params": []
+          },
+          {
+            "name": "1",
+            "params": []
+          }
+        ],
+        "total_params": 0,
+        "description": "\u6b8b\u5dee\u5757, 2\u5c42, 0\u4e2a\u53c2\u6570"
+      },
+      "ERBlock_5": {
+        "name": "ERBlock_5",
+        "layers": [
+          {
+            "name": "0",
+            "params": []
+          },
+          {
+            "name": "1",
+            "params": []
+          },
+          {
+            "name": "2",
+            "params": []
+          }
+        ],
+        "total_params": 0,
+        "description": "\u6b8b\u5dee\u5757, 3\u5c42, 0\u4e2a\u53c2\u6570"
+      }
+    },
+    "feature_scales": {
+      "ERBlock_2": "/4 (stride=4)",
+      "ERBlock_3": "/8 (stride=8)",
+      "ERBlock_4": "/16 (stride=16)",
+      "ERBlock_5": "/32 (stride=32)"
+    }
+  },
+  "neck": {
+    "reduce_layers": [
+      {
+        "name": "reduce_layer_c5",
+        "total_params": 0,
+        "conv_layers": [],
+        "description": "\u964d\u7ef4\u5c42, 0\u4e2a\u5377\u79ef, 0\u4e2a\u53c2\u6570"
+      },
+      {
+        "name": "reduce_layer_p4",
+        "total_params": 0,
+        "conv_layers": [],
+        "description": "\u964d\u7ef4\u5c42, 0\u4e2a\u5377\u79ef, 0\u4e2a\u53c2\u6570"
+      }
+    ],
+    "inject_modules": [
+      {
+        "name": "Inject_p4",
+        "total_params": 0,
+        "conv_layers": [],
+        "description": "\u6ce8\u5165\u6a21\u5757, 0\u4e2a\u5377\u79ef, 0\u4e2a\u53c2\u6570"
+      },
+      {
+        "name": "Inject_p3",
+        "total_params": 0,
+        "conv_layers": [],
+        "description": "\u6ce8\u5165\u6a21\u5757, 0\u4e2a\u5377\u79ef, 0\u4e2a\u53c2\u6570"
+      },
+      {
+        "name": "Inject_n4",
+        "total_params": 0,
+        "conv_layers": [],
+        "description": "\u6ce8\u5165\u6a21\u5757, 0\u4e2a\u5377\u79ef, 0\u4e2a\u53c2\u6570"
+      },
+      {
+        "name": "Inject_n5",
+        "total_params": 0,
+        "conv_layers": [],
+        "description": "\u6ce8\u5165\u6a21\u5757, 0\u4e2a\u5377\u79ef, 0\u4e2a\u53c2\u6570"
+      }
+    ],
+    "laf_modules": [
+      {
+        "name": "LAF_p4",
+        "total_params": 0,
+        "conv_layers": [],
+        "description": "\u5c40\u90e8\u6ce8\u610f\u529b\u878d\u5408, 0\u4e2a\u5377\u79ef, 0\u4e2a\u53c2\u6570"
+      },
+      {
+        "name": "LAF_p3",
+        "total_params": 0,
+        "conv_layers": [],
+        "description": "\u5c40\u90e8\u6ce8\u610f\u529b\u878d\u5408, 0\u4e2a\u5377\u79ef, 0\u4e2a\u53c2\u6570"
+      }
+    ],
+    "rep_modules": [
+      {
+        "name": "Rep_p4",
+        "total_params": 0,
+        "conv_layers": [],
+        "description": "\u91cd\u53c2\u6570\u5316\u6a21\u5757, 0\u4e2a\u5377\u79ef, 0\u4e2a\u53c2\u6570"
+      },
+      {
+        "name": "Rep_p3",
+        "total_params": 0,
+        "conv_layers": [],
+        "description": "\u91cd\u53c2\u6570\u5316\u6a21\u5757, 0\u4e2a\u5377\u79ef, 0\u4e2a\u53c2\u6570"
+      },
+      {
+        "name": "Rep_n4",
+        "total_params": 0,
+        "conv_layers": [],
+        "description": "\u91cd\u53c2\u6570\u5316\u6a21\u5757, 0\u4e2a\u5377\u79ef, 0\u4e2a\u53c2\u6570"
+      },
+      {
+        "name": "Rep_n5",
+        "total_params": 0,
+        "conv_layers": [],
+        "description": "\u91cd\u53c2\u6570\u5316\u6a21\u5757, 0\u4e2a\u5377\u79ef, 0\u4e2a\u53c2\u6570"
+      }
+    ],
+    "transformer_blocks": [
+      {
+        "name": "high_IFM",
+        "total_params": 0,
+        "conv_layers": [],
+        "description": "\u5176\u4ed6\u6a21\u5757, 0\u4e2a\u5377\u79ef, 0\u4e2a\u53c2\u6570"
+      }
+    ],
+    "other_modules": [
+      {
+        "name": "low_IFM",
+        "total_params": 0,
+        "conv_layers": [],
+        "description": "\u5176\u4ed6\u6a21\u5757, 0\u4e2a\u5377\u79ef, 0\u4e2a\u53c2\u6570"
+      },
+      {
+        "name": "conv_1x1_n",
+        "total_params": 0,
+        "conv_layers": [],
+        "description": "\u5176\u4ed6\u6a21\u5757, 0\u4e2a\u5377\u79ef, 0\u4e2a\u53c2\u6570"
+      }
+    ],
+    "data_flow": {
+      "input_features": [
+        "c3",
+        "c4",
+        "c5"
+      ],
+      "processing_stages": [
+        {
+          "stage": "feature_reduction",
+          "modules": [
+            "reduce_layer_c5",
+            "reduce_layer_p4"
+          ],
+          "description": "\u7279\u5f81\u964d\u7ef4"
+        },
+        {
+          "stage": "feature_injection",
+          "modules": [
+            "Inject_p4",
+            "Inject_p3",
+            "Inject_n4",
+            "Inject_n5"
+          ],
+          "description": "\u7279\u5f81\u6ce8\u5165"
+        },
+        {
+          "stage": "local_attention_fusion",
+          "modules": [
+            "LAF_p4",
+            "LAF_p3"
+          ],
+          "description": "\u5c40\u90e8\u6ce8\u610f\u529b\u878d\u5408"
+        },
+        {
+          "stage": "reparameterization",
+          "modules": [
+            "Rep_p4",
+            "Rep_p3",
+            "Rep_n4",
+            "Rep_n5"
+          ],
+          "description": "\u91cd\u53c2\u6570\u5316\u5904\u7406"
+        }
+      ],
+      "output_features": [
+        "p3",
+        "p4",
+        "p5"
+      ]
+    }
+  },
+  "detect": {
+    "stems": [
+      {
+        "name": "stems",
+        "total_params": 0,
+        "layers": [],
+        "description": "\u7279\u5f81\u63d0\u53d6\u5e72, 0\u4e2a\u53c2\u6570"
+      }
+    ],
+    "cls_convs": [
+      {
+        "name": "cls_convs",
+        "total_params": 0,
+        "layers": [],
+        "description": "\u5206\u7c7b\u5377\u79ef, 0\u4e2a\u53c2\u6570"
+      }
+    ],
+    "reg_convs": [
+      {
+        "name": "reg_convs",
+        "total_params": 0,
+        "layers": [],
+        "description": "\u56de\u5f52\u5377\u79ef, 0\u4e2a\u53c2\u6570"
+      }
+    ],
+    "cls_preds": [
+      {
+        "name": "cls_preds",
+        "total_params": 0,
+        "layers": [],
+        "description": "\u5206\u7c7b\u9884\u6d4b, 0\u4e2a\u53c2\u6570"
+      }
+    ],
+    "reg_preds": [
+      {
+        "name": "reg_preds",
+        "total_params": 0,
+        "layers": [],
+        "description": "\u56de\u5f52\u9884\u6d4b, 0\u4e2a\u53c2\u6570"
+      }
+    ],
+    "proj": {
+      "name": "proj_conv",
+      "total_params": 0,
+      "layers": [],
+      "description": "\u6295\u5f71\u5c42, 0\u4e2a\u53c2\u6570"
+    },
+    "output_structure": {
+      "num_scales": 1,
+      "num_classes": 0,
+      "anchor_structure": {},
+      "output_channels": {
+        "scale_0": {
+          "cls_channels": 0,
+          "reg_channels": 0
+        }
+      }
+    }
+  },
+  "overall_statistics": {
+    "backbone_params": 0,
+    "neck_params": 0,
+    "detect_params": 0,
+    "total_params": 0
+  }
+}

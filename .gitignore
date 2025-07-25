@@ -39,3 +39,4 @@ pretrained/
 
 *.jt
 labels/voc2012_subset
+*.npz
