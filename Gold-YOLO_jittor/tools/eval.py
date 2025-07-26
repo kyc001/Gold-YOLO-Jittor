@@ -150,10 +150,14 @@ def run(data,
 
 def main():
     args = get_args_parser()
-    
+
+    # 过滤掉run函数不接受的参数
+    run_args = vars(args).copy()
+    run_args.pop('eval_config_file', None)  # 移除不支持的参数
+
     # 运行评估
-    result = run(**vars(args))
-    
+    result = run(**run_args)
+
     return result
 
 

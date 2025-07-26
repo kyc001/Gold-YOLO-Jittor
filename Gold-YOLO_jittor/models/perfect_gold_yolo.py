@@ -5,6 +5,7 @@
 严格按照PyTorch版本的build_network函数实现，确保参数量完全对齐
 """
 
+import os
 import jittor as jt
 from jittor import nn
 import math
@@ -186,13 +187,17 @@ class PerfectGoldYOLO(nn.Module):
     
     def __init__(self, config_path, num_classes=20, channels=3, fuse_ab=False, distill_ns=False):
         super().__init__()
-        
+
+        # 保存重要属性
+        self.num_classes = num_classes
+        self.channels = channels
+
         # 加载配置
         if isinstance(config_path, str):
             self.config = Config.fromfile(config_path)
         else:
             self.config = config_path
-        
+
         # 构建网络
         if hasattr(self.config, 'model'):
             model_cfg = self.config.model
@@ -203,7 +208,7 @@ class PerfectGoldYOLO(nn.Module):
         self.backbone, self.neck, self.detect = build_network(
             self.config, channels, num_classes, num_layers, fuse_ab, distill_ns
         )
-        
+
         # 初始化检测头
         self.stride = self.detect.stride
         self.detect.initialize_biases()
@@ -221,16 +226,46 @@ class PerfectGoldYOLO(nn.Module):
         print(f"   Head: {head_params:,} ({head_params/total_params*100:.1f}%)")
     
     def execute(self, x):
-        """前向传播"""
+        """前向传播 - 修复训练/推理一致性"""
         # Backbone特征提取
         features = self.backbone(x)
-        
+
         # Neck特征融合
         neck_features = self.neck(features)
-        
-        # Head检测
+
+        # Head检测 - 始终返回统一格式
         outputs = self.detect(neck_features)
-        
+
+        # 确保输出格式一致：始终返回单个tensor [batch, anchors, channels]
+        if isinstance(outputs, (list, tuple)):
+            # 如果是多个输出，合并为单个tensor
+            if len(outputs) >= 2:
+                # 假设是[pred_scores, pred_boxes]格式
+                pred_scores = outputs[0]  # [batch, anchors, num_classes]
+                pred_boxes = outputs[1]   # [batch, anchors, 4]
+
+                # 合并为单个tensor
+                outputs = jt.concat([pred_scores, pred_boxes], dim=-1)  # [batch, anchors, num_classes+4]
+            else:
+                outputs = outputs[0]
+
+        # 验证输出格式
+        if len(outputs.shape) != 3:
+            raise ValueError(f"模型输出格式错误！期望3维tensor，得到{outputs.shape}")
+
+        batch_size, num_anchors, total_channels = outputs.shape
+        expected_channels = self.num_classes + 4  # 分类 + 回归
+
+        if total_channels != expected_channels:
+            print(f"⚠️ 输出通道数不匹配：期望{expected_channels}，得到{total_channels}")
+            # 调整输出通道数
+            if total_channels > expected_channels:
+                outputs = outputs[:, :, :expected_channels]
+            else:
+                # 补齐通道
+                padding = jt.zeros((batch_size, num_anchors, expected_channels - total_channels))
+                outputs = jt.concat([outputs, padding], dim=-1)
+
         return outputs
 
 
@@ -239,7 +274,13 @@ def create_perfect_gold_yolo_model(config_name='gold_yolo-n', num_classes=20):
     print(f'🎯 创建100%对齐的{config_name}模型...')
     
     # 配置文件路径
-    config_path = f'configs/{config_name}.py'
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    config_path = os.path.join(base_dir, 'configs', f'{config_name}.py')
+
+    print(f'📁 配置文件路径: {config_path}')
+    if not os.path.exists(config_path):
+        print(f'❌ 配置文件不存在: {config_path}')
+        raise FileNotFoundError(f'配置文件不存在: {config_path}')
     
     # 创建模型
     model = PerfectGoldYOLO(

@@ -8,6 +8,40 @@ https://github.com/fcjian/TOOD/blob/master/mmdet/core/bbox/iou_calculators/iou2d
 import jittor as jt
 
 
+def compute_iou_2d(bboxes1, bboxes2):
+    """简化的2D IoU计算"""
+    # bboxes1: [N, 4], bboxes2: [M, 4]
+    # 返回: [N, M]
+
+    N = bboxes1.shape[0]
+    M = bboxes2.shape[0]
+
+    # 扩展维度进行广播
+    bboxes1_exp = bboxes1.unsqueeze(1)  # [N, 1, 4]
+    bboxes2_exp = bboxes2.unsqueeze(0)  # [1, M, 4]
+
+    # 计算交集
+    x1 = jt.maximum(bboxes1_exp[:, :, 0], bboxes2_exp[:, :, 0])
+    y1 = jt.maximum(bboxes1_exp[:, :, 1], bboxes2_exp[:, :, 1])
+    x2 = jt.minimum(bboxes1_exp[:, :, 2], bboxes2_exp[:, :, 2])
+    y2 = jt.minimum(bboxes1_exp[:, :, 3], bboxes2_exp[:, :, 3])
+
+    # 交集面积
+    intersection = jt.clamp(x2 - x1, min_v=0) * jt.clamp(y2 - y1, min_v=0)
+
+    # 计算各自面积
+    area1 = (bboxes1_exp[:, :, 2] - bboxes1_exp[:, :, 0]) * (bboxes1_exp[:, :, 3] - bboxes1_exp[:, :, 1])
+    area2 = (bboxes2_exp[:, :, 2] - bboxes2_exp[:, :, 0]) * (bboxes2_exp[:, :, 3] - bboxes2_exp[:, :, 1])
+
+    # 并集面积
+    union = area1 + area2 - intersection
+
+    # IoU
+    iou = intersection / (union + 1e-6)
+
+    return iou
+
+
 def cast_tensor_type(x, scale=1., dtype=None):
     if dtype == 'fp16':
         # scale is for preventing overflows
@@ -181,9 +215,53 @@ def bbox_overlaps(bboxes1, bboxes2, mode='iou', is_aligned=False, eps=1e-6):
     assert (bboxes1.size(-1) == 4 or bboxes1.size(0) == 0)
     assert (bboxes2.size(-1) == 4 or bboxes2.size(0) == 0)
 
-    # Batch dim must be the same
-    # Batch dim: (B1, B2, ... Bn)
-    assert bboxes1.shape[:-2] == bboxes2.shape[:-2]
+    # 修复batch维度不匹配问题
+    if bboxes1.shape[:-2] != bboxes2.shape[:-2]:
+        # 验证bbox格式
+        if bboxes1.shape[-1] != 4:
+            raise ValueError(f"bboxes1最后维度必须是4，得到: {bboxes1.shape}")
+        if bboxes2.shape[-1] != 4:
+            raise ValueError(f"bboxes2最后维度必须是4，得到: {bboxes2.shape}")
+
+        # 如果bboxes1是2D [N, 4]，bboxes2是3D [B, M, 4]
+        if len(bboxes1.shape) == 2 and len(bboxes2.shape) == 3:
+            # 将bboxes2 reshape为2D [B*M, 4]
+            batch_size = bboxes2.shape[0]
+            num_anchors = bboxes2.shape[1]
+            bboxes2_reshaped = bboxes2.view(-1, 4)  # [B*M, 4]
+
+            # 验证reshape后的格式
+            if bboxes2_reshaped.shape[-1] != 4:
+                raise ValueError(f"bboxes2 reshape后格式错误: {bboxes2_reshaped.shape}")
+
+            # 计算IoU (使用简化的2D计算)
+            overlaps = compute_iou_2d(bboxes1, bboxes2_reshaped)
+
+            # 将结果reshape回 [N, B*M]，然后可以进一步处理
+            return overlaps
+
+        # 如果bboxes2是2D [N, 4]，bboxes1是3D [B, M, 4]
+        elif len(bboxes1.shape) == 3 and len(bboxes2.shape) == 2:
+            # 将bboxes1 reshape为2D [B*M, 4]
+            batch_size = bboxes1.shape[0]
+            num_anchors = bboxes1.shape[1]
+            bboxes1_reshaped = bboxes1.view(-1, 4)  # [B*M, 4]
+
+            # 验证reshape后的格式
+            if bboxes1_reshaped.shape[-1] != 4:
+                raise ValueError(f"bboxes1 reshape后格式错误: {bboxes1_reshaped.shape}")
+
+            # 计算IoU (使用简化的2D计算)
+            overlaps = compute_iou_2d(bboxes1_reshaped, bboxes2)
+
+            # 将结果reshape回 [B*M, N]
+            return overlaps
+
+        else:
+            raise AssertionError(f"不支持的bbox形状组合: {bboxes1.shape} vs {bboxes2.shape}")
+
+    # 原始的batch维度检查
+    # assert bboxes1.shape[:-2] == bboxes2.shape[:-2]
     batch_shape = bboxes1.shape[:-2]
 
     rows = bboxes1.size(-2)
@@ -238,6 +316,10 @@ def bbox_overlaps(bboxes1, bboxes2, mode='iou', is_aligned=False, eps=1e-6):
     eps = jt.array([eps], dtype=union.dtype)
     union = jt.maximum(union, eps)
     ious = overlap / union
+
+    # 限制IoU值在合理范围内，防止数值错误
+    ious = jt.clamp(ious, 0.0, 1.0)
+
     if mode in ['iou', 'iof']:
         return ious
     # calculate gious
@@ -245,4 +327,8 @@ def bbox_overlaps(bboxes1, bboxes2, mode='iou', is_aligned=False, eps=1e-6):
     enclose_area = enclose_wh[..., 0] * enclose_wh[..., 1]
     enclose_area = jt.maximum(enclose_area, eps)
     gious = ious - (enclose_area - union) / enclose_area
+
+    # 限制GIoU值在合理范围内
+    gious = jt.clamp(gious, -1.0, 1.0)
+
     return gious

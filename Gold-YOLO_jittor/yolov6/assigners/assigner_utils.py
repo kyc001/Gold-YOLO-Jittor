@@ -4,6 +4,7 @@ GOLD-YOLO Jittor版本 - 分配器工具函数
 """
 
 import jittor as jt
+from jittor import nn
 import jittor.nn as nn
 
 
@@ -17,6 +18,14 @@ def dist_calculator(gt_bboxes, anchor_bboxes):
         distances (Tensor): shape(bs*n_max_boxes, num_total_anchors)
         ac_points (Tensor): shape(num_total_anchors, 2)
     """
+    # 确保anchor_bboxes是2D的[M, 4]格式
+    if len(anchor_bboxes.shape) != 2 or anchor_bboxes.shape[-1] != 4:
+        # 尝试reshape
+        if anchor_bboxes.numel() % 4 == 0:
+            anchor_bboxes = anchor_bboxes.view(-1, 4)
+        else:
+            raise ValueError(f"anchor_bboxes无法reshape为[M, 4]: {anchor_bboxes.shape}")
+
     gt_cx = (gt_bboxes[:, 0] + gt_bboxes[:, 2]) / 2.0
     gt_cy = (gt_bboxes[:, 1] + gt_bboxes[:, 3]) / 2.0
     gt_points = jt.stack([gt_cx, gt_cy], dim=1)
@@ -24,7 +33,19 @@ def dist_calculator(gt_bboxes, anchor_bboxes):
     ac_cy = (anchor_bboxes[:, 1] + anchor_bboxes[:, 3]) / 2.0
     ac_points = jt.stack([ac_cx, ac_cy], dim=1)
 
-    distances = (gt_points[:, None, :] - ac_points[None, :, :]).pow(2).sum(-1).sqrt()
+    # 修复形状不匹配问题
+    # gt_points: [N, 2], ac_points: [M, 2]
+    # 需要计算每个GT点到每个anchor点的距离
+
+    N = gt_points.shape[0]
+    M = ac_points.shape[0]
+
+    # 扩展维度进行广播
+    gt_points_exp = gt_points.unsqueeze(1)  # [N, 1, 2]
+    ac_points_exp = ac_points.unsqueeze(0)  # [1, M, 2]
+
+    # 计算距离
+    distances = ((gt_points_exp - ac_points_exp) ** 2).sum(-1).sqrt()  # [N, M]
 
     return distances, ac_points
 
@@ -66,12 +87,13 @@ def select_highest_overlaps(mask_pos, overlaps, n_max_boxes):
     fg_mask = mask_pos.sum(dim=-2)
     if fg_mask.max() > 1:
         mask_multi_gts = (fg_mask.unsqueeze(1) > 1).repeat([1, n_max_boxes, 1])
-        max_overlaps_idx = overlaps.argmax(dim=1)
+        max_overlaps_idx = jt.argmax(overlaps, dim=1)[0]  # 修复Jittor argmax API
         is_max_overlaps = nn.one_hot(max_overlaps_idx, n_max_boxes)
         is_max_overlaps = is_max_overlaps.permute(0, 2, 1).astype(overlaps.dtype)
         mask_pos = jt.where(mask_multi_gts, is_max_overlaps, mask_pos)
         fg_mask = mask_pos.sum(dim=-2)
-    target_gt_idx = mask_pos.argmax(dim=-2)
+    # 修复Jittor argmax API - 使用正确的维度索引
+    target_gt_idx = jt.argmax(mask_pos, dim=1)[0]  # Jittor返回(indices, values)
     return target_gt_idx, fg_mask , mask_pos
 
 
@@ -79,15 +101,19 @@ def iou_calculator(box1, box2, eps=1e-9):
     """Calculate iou for batch
 
     Args:
-        box1 (Tensor): shape(bs, n_max_boxes, 1, 4)
-        box2 (Tensor): shape(bs, 1, num_total_anchors, 4)
+        box1 (Tensor): shape(bs, n_max_boxes, 1, 4) 或 (bs, n_max_boxes, 4)
+        box2 (Tensor): shape(bs, 1, num_total_anchors, 4) 或 (bs, num_total_anchors, 4)
     Return:
         (Tensor): shape(bs, n_max_boxes, num_total_anchors)
     """
-    box1 = box1.unsqueeze(2)  # [N, M1, 4] -> [N, M1, 1, 4]
-    box2 = box2.unsqueeze(1)  # [N, M2, 4] -> [N, 1, M2, 4]
-    px1y1, px2y2 = box1[:, :, :, 0:2], box1[:, :, :, 2:4]
-    gx1y1, gx2y2 = box2[:, :, :, 0:2], box2[:, :, :, 2:4]
+    # 确保正确的维度 - 如果输入已经有正确维度就不要再unsqueeze
+    if len(box1.shape) == 3:  # [bs, n_max_boxes, 4]
+        box1 = box1.unsqueeze(2)  # -> [bs, n_max_boxes, 1, 4]
+    if len(box2.shape) == 3:  # [bs, num_total_anchors, 4]
+        box2 = box2.unsqueeze(1)  # -> [bs, 1, num_total_anchors, 4]
+    # 修复Jittor 4维切片问题 - 使用split替代切片
+    px1y1, px2y2 = jt.split(box1, [2, 2], dim=-1)
+    gx1y1, gx2y2 = jt.split(box2, [2, 2], dim=-1)
     x1y1 = jt.maximum(px1y1, gx1y1)
     x2y2 = jt.minimum(px2y2, gx2y2)
     overlap = (x2y2 - x1y1).clamp(0).prod(-1)

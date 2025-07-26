@@ -203,3 +203,16 @@ cd /home/kyc/project/GOLD-YOLO/Gold-YOLO_jittor && conda activate jt && python t
 可以看出，pytorch版权重/home/kyc/project/GOLD-YOLO/Gold-YOLO_pytorch/runs/train/gold_yolo_n_improved使用pytorch脚本推理测试后的结果还是有一定准确率的，说明权重本身是对的，而转换到jittor版后加载却出问题了，说明jittor版本架构或者转换脚本出了问题！！请深入修复！！
 
 你别乱讲，pytorch版权重/home/kyc/project/GOLD-YOLO/Gold-YOLO_pytorch/runs/train/gold_yolo_n_improved使用pytorch脚本推理测试后的结果还是有一定准确率的，说明模型以及权重本身是对的
+
+
+
+有几个问题
+1.没有用tqdm展示进度
+2.训练居然不用真实数据？？？
+3.没有用完整的损失函数。
+4.整理项目目录，删除没有用的，不要反复创建新版本！
+
+“这个损失函数太复杂，需要很多依赖。”
+深入复现！！！百分百还原！！！
+
+复杂不是理由！！！百分百深入还原！！

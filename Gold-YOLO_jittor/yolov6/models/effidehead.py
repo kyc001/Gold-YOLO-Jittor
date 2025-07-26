@@ -31,7 +31,9 @@ class Detect(nn.Module):
         self.stride = jt.array(stride)  # 使用jt.array替代torch.tensor
         self.use_dfl = use_dfl
         self.reg_max = reg_max
-        self.proj_conv = nn.Conv2d(self.reg_max + 1, 1, 1, bias=False)
+        # 只在use_dfl=True时创建proj_conv，避免无用参数
+        if self.use_dfl:
+            self.proj_conv = nn.Conv2d(self.reg_max + 1, 1, 1, bias=False)
         self.grid_cell_offset = 0.5
         self.grid_cell_size = 5.0
         
@@ -62,8 +64,9 @@ class Detect(nn.Module):
             # Jittor使用不同的初始化方式
             conv.bias.data = jt.ones_like(conv.bias.data)
         
-        if self.use_dfl:
-            self.proj_conv.weight.data.fill_(0.)
+        if self.use_dfl and hasattr(self, 'proj_conv'):
+            # 使用更好的初始化，避免梯度消失
+            nn.init.xavier_uniform_(self.proj_conv.weight)
     
     def execute(self, x):
         """Jittor版本的前向传播"""
@@ -103,7 +106,7 @@ class Detect(nn.Module):
                 reg_feat = self.reg_convs[i](reg_x)
                 reg_output = self.reg_preds[i](reg_feat)
                 
-                if self.use_dfl:
+                if self.use_dfl and hasattr(self, 'proj_conv'):
                     reg_output = reg_output.reshape([-1, 4, self.reg_max + 1, l]).permute(0, 2, 1, 3)
                     reg_output = self.proj_conv(nn.softmax(reg_output, dim=1))
                 

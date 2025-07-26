@@ -24,6 +24,7 @@ import tools.eval as eval
 from yolov6.data.data_load import create_dataloader
 from yolov6.models.yolo import build_model
 
+# 百分百对齐PyTorch版本 - 完整的损失函数导入
 from yolov6.models.losses.loss import ComputeLoss as ComputeLoss
 from yolov6.models.losses.loss_fuseab import ComputeLoss as ComputeLoss_ab
 from yolov6.models.losses.loss_distill import ComputeLoss as ComputeLoss_distill

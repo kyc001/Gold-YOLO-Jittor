@@ -136,31 +136,15 @@ class RepGDNeck(nn.Module):
     def execute(self, input):
         (c2, c3, c4, c5) = input
 
-        # 调试信息
-        print(f"🔍 RepGDNeck输入特征形状:")
-        print(f"   c2: {list(c2.shape)}")
-        print(f"   c3: {list(c3.shape)}")
-        print(f"   c4: {list(c4.shape)}")
-        print(f"   c5: {list(c5.shape)}")
-
         # Low-GD
         ## use conv fusion global info
         low_align_feat = self.low_FAM(input)
-        print(f"🔍 low_align_feat形状: {list(low_align_feat.shape)}")
-
         low_fuse_feat = self.low_IFM(low_align_feat)
         low_global_info = low_fuse_feat.split(self.trans_channels[0:2], dim=1)  # Jittor使用split
         
         ## inject low-level global info to p4
         c5_half = self.reduce_layer_c5(c5)
-        print(f"🔍 LAF_p4输入形状:")
-        print(f"   c3: {list(c3.shape)}")
-        print(f"   c4: {list(c4.shape)}")
-        print(f"   c5_half: {list(c5_half.shape)}")
         p4_adjacent_info = self.LAF_p4([c3, c4, c5_half])
-        print(f"🔍 Inject_p4输入形状:")
-        print(f"   p4_adjacent_info: {list(p4_adjacent_info.shape)}")
-        print(f"   low_global_info[0]: {list(low_global_info[0].shape)}")
         p4 = self.Inject_p4(p4_adjacent_info, low_global_info[0])
         p4 = self.Rep_p4(p4)
         
@@ -173,7 +157,6 @@ class RepGDNeck(nn.Module):
         # High-GD
         ## use transformer fusion global info
         high_align_feat = self.high_FAM([p3, p4, c5])
-        print(f"🔍 high_align_feat形状: {list(high_align_feat.shape)}")
         high_fuse_feat = self.high_IFM(high_align_feat)
         high_fuse_feat = self.conv_1x1_n(high_fuse_feat)
         high_global_info = high_fuse_feat.split(self.trans_channels[2:4], dim=1)

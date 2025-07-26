@@ -1,0 +1,4 @@
+你必须始终记住，要用完整"满血"的模型进行训练，而不是你遇到问题自作主张进行简化，遇到问题一定要深入修复，确保模型完全还原pytorch的版本，对于任何已有的代码，都需要先检查一遍
+该项目是对齐实验，实验中用到的参数应当与pytorch版保持一致，包括训练用到的参数。
+现在应该深入解决所有问题，不能绕开，不能擅自简化，修复一切问题后开始200轮训练！
+当训练完毕得到模型后，应该和pytorch版本一样，使用与Gold-YOLO_pytorch/tools内的自带的脚本对齐的jittor脚本进行评估推理测试，不用再重新编写，此外，评估模型的首要标准应当是识别准确率！！测试图片如下/home/kyc/miniconda3/envs/jt/bin/python /home/kyc/project/GOLD-YOLO/Gold-YOLO_jittor/train_with_monitor.py

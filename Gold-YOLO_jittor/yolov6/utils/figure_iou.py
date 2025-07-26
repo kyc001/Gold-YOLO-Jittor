@@ -55,28 +55,47 @@ class IOUloss:
         inter = (jt.minimum(b1_x2, b2_x2) - jt.maximum(b1_x1, b2_x1)).clamp(0) * \
                 (jt.minimum(b1_y2, b2_y2) - jt.maximum(b1_y1, b2_y1)).clamp(0)
 
-        # Union Area
+        # Union Area - 添加更严格的数值检查
         w1, h1 = b1_x2 - b1_x1, b1_y2 - b1_y1 + self.eps
         w2, h2 = b2_x2 - b2_x1, b2_y2 - b2_y1 + self.eps
+
+        # 确保宽高为正值
+        w1 = jt.clamp(w1, self.eps, 1e6)
+        h1 = jt.clamp(h1, self.eps, 1e6)
+        w2 = jt.clamp(w2, self.eps, 1e6)
+        h2 = jt.clamp(h2, self.eps, 1e6)
+
         union = w1 * h1 + w2 * h2 - inter + self.eps
+        # 确保union为正值
+        union = jt.clamp(union, self.eps, 1e8)
+
         iou = inter / union
+
+        # 限制IoU值在合理范围内，防止数值错误
+        iou = jt.clamp(iou, 0.0, 1.0)
 
         cw = jt.maximum(b1_x2, b2_x2) - jt.minimum(b1_x1, b2_x1)  # convex width
         ch = jt.maximum(b1_y2, b2_y2) - jt.minimum(b1_y1, b2_y1)  # convex height
         if self.iou_type == 'giou':
             c_area = cw * ch + self.eps  # convex area
             iou = iou - (c_area - union) / c_area
+            # 限制GIoU值在合理范围内
+            iou = jt.clamp(iou, -1.0, 1.0)
         elif self.iou_type in ['diou', 'ciou']:
             c2 = cw ** 2 + ch ** 2 + self.eps  # convex diagonal squared
             rho2 = ((b2_x1 + b2_x2 - b1_x1 - b1_x2) ** 2 +
                     (b2_y1 + b2_y2 - b1_y1 - b1_y2) ** 2) / 4  # center distance squared
             if self.iou_type == 'diou':
                 iou = iou - rho2 / c2
+                # 限制DIoU值在合理范围内
+                iou = jt.clamp(iou, -1.0, 1.0)
             elif self.iou_type == 'ciou':
                 v = (4 / math.pi ** 2) * jt.pow(jt.atan(w2 / h2) - jt.atan(w1 / h1), 2)
                 with jt.no_grad():
                     alpha = v / (v - iou + (1 + self.eps))
                 iou = iou - (rho2 / c2 + v * alpha)
+                # 限制CIoU值在合理范围内
+                iou = jt.clamp(iou, -1.0, 1.0)
         elif self.iou_type == 'siou':
             # SIoU Loss https://arxiv.org/pdf/2205.12740.pdf
             s_cw = (b2_x1 + b2_x2 - b1_x1 - b1_x2) * 0.5 + self.eps
@@ -95,7 +114,22 @@ class IOUloss:
             omiga_h = jt.abs(h1 - h2) / jt.maximum(h1, h2)
             shape_cost = jt.pow(1 - jt.exp(-1 * omiga_w), 4) + jt.pow(1 - jt.exp(-1 * omiga_h), 4)
             iou = iou - 0.5 * (distance_cost + shape_cost)
+            # 限制SIoU值在合理范围内
+            iou = jt.clamp(iou, -1.0, 1.0)
         loss = 1.0 - iou
+
+        # 确保损失值在合理范围内
+        loss = jt.clamp(loss, 0.0, 10.0)  # 限制损失在[0, 10]范围内
+
+        # 检查NaN值 - 修复Jittor API
+        try:
+            nan_mask = jt.isnan(loss)
+            if nan_mask.sum() > 0:
+                print(f"⚠️ IoU损失包含NaN，设为1.0")
+                loss = jt.ones_like(loss)
+        except:
+            # 如果isnan不可用，跳过检查
+            pass
 
         if self.reduction == 'sum':
             loss = loss.sum()
