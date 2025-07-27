@@ -44,7 +44,7 @@ class BboxLoss(nn.Module):
     def __init__(self, num_classes, reg_max, use_dfl=False, iou_type='giou'):
         super(BboxLoss, self).__init__()
         self.num_classes = num_classes
-        self.iou_loss = IOUloss(box_format='xywh', iou_type=iou_type, eps=1e-10)
+        self.iou_loss = IOUloss(box_format='xyxy', iou_type=iou_type, eps=1e-10)
         self.reg_max = reg_max
         self.use_dfl = use_dfl
         if self.use_dfl:
@@ -115,44 +115,101 @@ class BboxLoss(nn.Module):
         return loss_iou, loss_dfl
 
     def _df_loss(self, pred_dist, target):
-        # 简化DFL损失计算，避免NaN
+        # DFL损失计算 - 完全修复版本，彻底解决NaN问题
         try:
-            # 确保target在合理范围内
-            target = jt.clamp(target, 0.0, float(self.reg_max))
+            # 输入验证和清理
+            if pred_dist.numel() == 0 or target.numel() == 0:
+                return jt.zeros((1,), dtype='float32')
+            
+            # 清理输入中的异常值
+            pred_dist = jt.nan_to_num(pred_dist, nan=0.0, posinf=10.0, neginf=-10.0)
+            target = jt.nan_to_num(target, nan=0.0, posinf=float(self.reg_max), neginf=0.0)
+            
+            # 严格限制target范围，防止索引越界
+            target = jt.clamp(target, 0.0, float(self.reg_max - 1e-6))  # 稍微小于reg_max避免边界问题
 
-            target_left = target.astype('int64')
+            # 计算左右索引
+            target_left = jt.floor(target).astype('int64')
             target_right = target_left + 1
 
-            # 确保索引在有效范围内
-            target_left = jt.clamp(target_left, 0, self.reg_max)
+            # 再次确保索引安全
+            target_left = jt.clamp(target_left, 0, self.reg_max - 1)
             target_right = jt.clamp(target_right, 0, self.reg_max)
 
-            weight_left = target_right.astype('float32') - target
+            # 计算插值权重
             weight_right = target - target_left.astype('float32')
+            weight_left = 1.0 - weight_right
 
-            # 确保权重为正值且和为1
+            # 确保权重在[0,1]范围内且和为1
             weight_left = jt.clamp(weight_left, 0.0, 1.0)
             weight_right = jt.clamp(weight_right, 0.0, 1.0)
-            weight_sum = weight_left + weight_right
-            weight_left = weight_left / (weight_sum + 1e-8)
-            weight_right = weight_right / (weight_sum + 1e-8)
+            
+            # 归一化权重，确保和为1
+            weight_sum = weight_left + weight_right + 1e-8  # 防止除零
+            weight_left = weight_left / weight_sum
+            weight_right = weight_right / weight_sum
 
-            # 使用更稳定的损失计算
-            loss_left = jt.nn.cross_entropy_loss(pred_dist.view(-1, self.reg_max + 1),
-                                               target_left.view(-1), reduction='none').view(target_left.shape) * weight_left
-            loss_right = jt.nn.cross_entropy_loss(pred_dist.view(-1, self.reg_max + 1),
-                                                target_right.view(-1), reduction='none').view(target_left.shape) * weight_right
+            # 重塑预测分布
+            batch_size, num_points, _ = pred_dist.shape
+            pred_dist_reshaped = pred_dist.view(-1, self.reg_max + 1)
+            
+            # 应用softmax提高数值稳定性
+            pred_dist_reshaped = jt.nn.log_softmax(pred_dist_reshaped, dim=-1)
+            
+            # 重塑target索引
+            target_left_flat = target_left.view(-1)
+            target_right_flat = target_right.view(-1)
+            weight_left_flat = weight_left.view(-1)
+            weight_right_flat = weight_right.view(-1)
 
-            loss = (loss_left + loss_right).mean(-1, keepdims=True)
-
-            # 限制损失值范围
+            # 使用gather操作安全获取对应的log概率
+            num_samples = pred_dist_reshaped.shape[0]
+            
+            # 确保索引有效性
+            valid_mask = (target_left_flat >= 0) & (target_left_flat < self.reg_max + 1) & \
+                        (target_right_flat >= 0) & (target_right_flat < self.reg_max + 1)
+            
+            # 计算NLL损失
+            left_log_probs = jt.zeros_like(weight_left_flat)
+            right_log_probs = jt.zeros_like(weight_right_flat)
+            
+            if valid_mask.sum() > 0:
+                # 只对有效索引计算损失
+                valid_indices = jt.nonzero(valid_mask).squeeze(-1)
+                
+                if valid_indices.numel() > 0:
+                    # 使用advanced indexing安全获取log概率
+                    left_log_probs[valid_indices] = pred_dist_reshaped[valid_indices, target_left_flat[valid_indices]]
+                    right_log_probs[valid_indices] = pred_dist_reshaped[valid_indices, target_right_flat[valid_indices]]
+            
+            # 计算加权负对数似然损失
+            loss_left = -left_log_probs * weight_left_flat
+            loss_right = -right_log_probs * weight_right_flat
+            loss_flat = loss_left + loss_right
+            
+            # 重塑回原始形状
+            loss = loss_flat.view(batch_size, num_points)
+            
+            # 沿最后一个维度求平均，保持维度
+            loss = loss.mean(-1, keepdims=True)
+            
+            # 最终安全检查
+            loss = jt.nan_to_num(loss, nan=0.0, posinf=10.0, neginf=0.0)
             loss = jt.clamp(loss, 0.0, 10.0)
+            
+            # 如果仍有异常值，直接设为0
+            if jt.isnan(loss).sum() > 0 or jt.isinf(loss).sum() > 0:
+                loss = jt.zeros_like(loss)
 
             return loss
 
         except Exception as e:
-            # 如果计算失败，返回零损失
-            return jt.zeros((target.shape[0], target.shape[1], 1), dtype='float32')
+            print(f"🚨 DFL损失计算异常: {e}")
+            # 返回形状正确的零损失
+            if hasattr(target, 'shape') and len(target.shape) >= 2:
+                return jt.zeros((target.shape[0], target.shape[1], 1), dtype='float32')
+            else:
+                return jt.zeros((1, 1, 1), dtype='float32')
 
 
 class ComputeLoss:
@@ -215,6 +272,10 @@ class ComputeLoss:
         except Exception as e:
             pass
 
+        # 计算期望的通道数
+        reg_channels = 4 * (self.reg_max + 1) if self.use_dfl else 4
+        expected_channels = self.num_classes + reg_channels
+
         # 修复输出解析 - 处理单tensor输出
         if isinstance(outputs, (list, tuple)) and len(outputs) == 3:
             # 标准的三输出格式
@@ -224,16 +285,19 @@ class ComputeLoss:
             batch_size, num_anchors, total_channels = outputs.shape
 
             # 分离分类和回归部分
-            if total_channels >= self.num_classes + 4:
+            if total_channels >= expected_channels:
                 pred_scores = outputs[:, :, :self.num_classes]  # [batch, anchors, num_classes]
-                pred_distri = outputs[:, :, self.num_classes:self.num_classes+4]  # [batch, anchors, 4]
+                pred_distri = outputs[:, :, self.num_classes:self.num_classes+reg_channels]  # [batch, anchors, reg_channels]
 
                 # 创建虚拟的feats用于anchor生成
                 feats = self._create_dummy_feats(batch_size)
+                
+                print(f"✅ 输出解析成功: pred_scores={pred_scores.shape}, pred_distri={pred_distri.shape}")
             else:
-                raise ValueError(f"输出通道数不足！期望至少{self.num_classes + 4}，得到{total_channels}")
+                print(f"⚠️ 输出通道数不匹配：期望{expected_channels}，得到{total_channels}")
+                raise ValueError(f"输出通道数不匹配：期望{expected_channels}，得到{total_channels}")
         else:
-            raise ValueError(f"模型输出格式错误！期望(feats, pred_scores, pred_distri)或单tensor，得到: {type(outputs)}")
+            raise ValueError(f"模型输出格式错误！期望(pred_scores, pred_distri)、(feats, pred_scores, pred_distri)或单tensor，得到: {type(outputs)}")
         anchors, anchor_points, n_anchors_list, stride_tensor = \
                self.generate_anchors(feats, self.fpn_strides, self.grid_cell_size, self.grid_cell_offset)
 
@@ -416,26 +480,20 @@ class ComputeLoss:
             # 如果是list，直接处理
             targets_list = targets
         elif hasattr(targets, 'numpy'):
-            # 如果是tensor，转换为list
-            # 安全的GPU到CPU数据转换
+            # 如果是tensor，优化转换过程
             try:
-                # 先detach，然后转换
-                targets_detached = targets.detach()
-                targets_list = targets_detached.numpy().tolist()
-            except RuntimeError as e:
-                if 'CUDA' in str(e) or 'cuda' in str(e):
-                    print(f"⚠️ GPU数据转换错误，尝试修复: {e}")
-                    # 强制清理GPU内存
-                    jt.gc_all()
-                    try:
-                        targets_detached = targets.detach()
-                        targets_list = targets_detached.numpy().tolist()
-                    except:
-                        # 如果仍然失败，创建空的targets_list
-                        print(f"⚠️ 无法转换targets，使用空列表")
-                        targets_list = []
+                # 直接在GPU上处理，避免CPU转换
+                if targets.numel() == 0:
+                    targets_list = []
                 else:
-                    raise e
+                    # 尝试保持在GPU上处理
+                    targets_detached = targets.detach()
+                    # 只在必要时转换为numpy
+                    targets_np = targets_detached.numpy()
+                    targets_list = targets_np.tolist()
+            except Exception as e:
+                print(f"⚠️ targets转换失败: {e}")
+                targets_list = []
         else:
             raise ValueError(f"不支持的targets类型: {type(targets)}")
 

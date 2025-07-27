@@ -414,6 +414,14 @@ class Trainer:
     @staticmethod
     def prepro_data(batch_data, device):
         # Jittor自动处理设备转换，不需要.to(device)
-        images = batch_data[0].float() / 255
+        # 修复：确保图像数据类型正确，避免int进入卷积层
+        images = batch_data[0]
+        if images.dtype != 'float32':
+            images = images.float32()  # 强制转换为float32
+        images = images / 255.0  # 归一化
+
         targets = batch_data[1]
+        if targets.dtype != 'float32':
+            targets = targets.float32()  # 确保targets也是float32
+
         return images, targets

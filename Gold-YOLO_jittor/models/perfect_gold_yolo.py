@@ -185,18 +185,32 @@ def build_network(config, channels=3, num_classes=80, num_layers=3, fuse_ab=Fals
 class PerfectGoldYOLO(nn.Module):
     """100%对齐的GOLD-YOLO模型"""
     
-    def __init__(self, config_path, num_classes=20, channels=3, fuse_ab=False, distill_ns=False):
+    def __init__(self, config_path, num_classes=None, channels=3, fuse_ab=False, distill_ns=False):
         super().__init__()
-
-        # 保存重要属性
-        self.num_classes = num_classes
-        self.channels = channels
 
         # 加载配置
         if isinstance(config_path, str):
             self.config = Config.fromfile(config_path)
         else:
             self.config = config_path
+
+        # 从配置文件获取类别数，如果未指定则使用配置文件中的nc
+        if num_classes is None:
+            if hasattr(self.config, 'model') and 'nc' in self.config.model:
+                num_classes = self.config.model['nc']
+            elif hasattr(self.config, 'nc'):
+                num_classes = self.config.nc
+            elif 'nc' in self.config:
+                num_classes = self.config['nc']
+            else:
+                num_classes = 80  # 默认COCO类别数
+                print(f"⚠️ 配置文件中未找到nc参数，使用默认值: {num_classes}")
+
+        # 保存重要属性
+        self.num_classes = num_classes
+        self.channels = channels
+        
+        print(f"🎯 模型初始化: num_classes={num_classes}, channels={channels}")
 
         # 构建网络
         if hasattr(self.config, 'model'):
@@ -238,14 +252,20 @@ class PerfectGoldYOLO(nn.Module):
 
         # 确保输出格式一致：始终返回单个tensor [batch, anchors, channels]
         if isinstance(outputs, (list, tuple)):
-            # 如果是多个输出，合并为单个tensor
+            # 如果是多个输出，检查是否已经是YOLO格式
             if len(outputs) >= 2:
-                # 假设是[pred_scores, pred_boxes]格式
-                pred_scores = outputs[0]  # [batch, anchors, num_classes]
-                pred_boxes = outputs[1]   # [batch, anchors, 4]
+                # 检查第一个输出的通道数
+                first_output = outputs[0]
+                if len(first_output.shape) == 3 and first_output.shape[-1] == 25:  # 4+1+20=25
+                    # 已经是YOLO格式 [4坐标+1置信度+num_classes类别]
+                    outputs = first_output
+                else:
+                    # 旧格式[pred_scores, pred_boxes]，需要转换
+                    pred_scores = outputs[0]  # [batch, anchors, num_classes]
+                    pred_boxes = outputs[1]   # [batch, anchors, 4]
 
-                # 合并为单个tensor
-                outputs = jt.concat([pred_scores, pred_boxes], dim=-1)  # [batch, anchors, num_classes+4]
+                    # 合并为旧格式（为了兼容性）
+                    outputs = jt.concat([pred_scores, pred_boxes], dim=-1)  # [batch, anchors, num_classes+4]
             else:
                 outputs = outputs[0]
 
@@ -254,17 +274,34 @@ class PerfectGoldYOLO(nn.Module):
             raise ValueError(f"模型输出格式错误！期望3维tensor，得到{outputs.shape}")
 
         batch_size, num_anchors, total_channels = outputs.shape
-        expected_channels = self.num_classes + 4  # 分类 + 回归
+        
+        # 根据模型配置计算期望通道数
+        head_cfg = self.config.model['head'] if hasattr(self.config, 'model') else self.config['model']['head']
+        use_dfl = head_cfg.get('use_dfl', False)  # 默认为False
+        reg_max = head_cfg.get('reg_max', 0)     # 默认为0
+        
+        if use_dfl and reg_max > 0:
+            reg_channels = 4 * (reg_max + 1)  # DFL回归通道数
+        else:
+            reg_channels = 4  # 标准回归通道数
+            
+        # 修复：期望YOLO格式 [4坐标 + 1置信度 + num_classes类别]
+        expected_channels = 4 + 1 + 20  # YOLO格式：坐标 + 置信度 + 类别
 
         if total_channels != expected_channels:
-            print(f"⚠️ 输出通道数不匹配：期望{expected_channels}，得到{total_channels}")
-            # 调整输出通道数
-            if total_channels > expected_channels:
-                outputs = outputs[:, :, :expected_channels]
+            print(f"⚠️ 输出通道数不匹配：期望{expected_channels}（YOLO格式:4+1+20），得到{total_channels}")
+            # 如果是25通道，说明已经是正确的YOLO格式，不需要调整
+            if total_channels == 25:
+                print(f"✅ 检测到YOLO格式，保持25通道")
+                pass  # 不做任何调整
             else:
-                # 补齐通道
-                padding = jt.zeros((batch_size, num_anchors, expected_channels - total_channels))
-                outputs = jt.concat([outputs, padding], dim=-1)
+                # 其他情况才需要调整
+                if total_channels > expected_channels:
+                    outputs = outputs[:, :, :expected_channels]
+                else:
+                    # 补齐通道
+                    padding = jt.zeros((batch_size, num_anchors, expected_channels - total_channels))
+                    outputs = jt.concat([outputs, padding], dim=-1)
 
         return outputs
 

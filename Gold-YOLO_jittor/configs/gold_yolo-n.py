@@ -2,11 +2,15 @@
 #            Huawei Technologies Co., Ltd. <foss@huawei.com>
 # GoldYOLO-n model
 
+# 数据配置
+nc = 20  # VOC数据集类别数
+
 model = dict(
         type='GoldYOLO-n',
         pretrained=None,
         depth_multiple=0.33,
         width_multiple=0.25,
+        nc=nc,  # 添加类别数配置
         backbone=dict(
                 type='EfficientRep',
                 num_repeats=[1, 6, 12, 18, 6],
@@ -88,4 +92,4 @@ data_aug = dict(
 training_mode = "conv_silu"
 
 # 数据配置
-data_path = "./data/coco.yaml"
+data_path = "./data/voc_gold_yolo_jittor.yaml"

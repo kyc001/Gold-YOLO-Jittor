@@ -87,7 +87,24 @@ class Detect(nn.Module):
                 cls_score_list.append(cls_output.flatten(2).permute((0, 2, 1)))
                 reg_distri_list.append(reg_output.flatten(2).permute((0, 2, 1)))
             
-            return jt.concat(cls_score_list, dim=1), jt.concat(reg_distri_list, dim=1)
+            # 合并为标准YOLO格式：[x, y, w, h, objectness, class1, class2, ...]
+            cls_scores = jt.concat(cls_score_list, dim=1)  # [batch, anchors, num_classes]
+            reg_distri = jt.concat(reg_distri_list, dim=1)  # [batch, anchors, 4]
+
+            # 添加objectness置信度（使用类别概率的最大值作为objectness）
+            # 在Jittor中，max可能返回不同格式，使用更安全的方法
+            objectness = jt.max(cls_scores, dim=-1)  # 可能返回tuple或tensor
+            if isinstance(objectness, tuple):
+                objectness = objectness[0]  # 取值，忽略索引
+
+            # 确保objectness是3维的
+            if len(objectness.shape) == 2:
+                objectness = objectness.unsqueeze(-1)  # [batch, anchors, 1]
+
+            # 合并为YOLO格式：[坐标(4) + 置信度(1) + 类别(num_classes)]
+            yolo_output = jt.concat([reg_distri, objectness, cls_scores], dim=-1)
+
+            return yolo_output
         
         else:
             cls_score_list = []
@@ -116,10 +133,21 @@ class Detect(nn.Module):
             
             cls_score_list = jt.concat(cls_score_list, dim=-1).permute(0, 2, 1)
             reg_dist_list = jt.concat(reg_dist_list, dim=-1).permute(0, 2, 1)
-            
+
             pred_bboxes = dist2bbox(reg_dist_list, anchor_points, box_format='xyxy')
             pred_bboxes *= stride_tensor
-            return jt.concat([pred_bboxes, cls_score_list], dim=-1)
+
+            # 修复：返回YOLO格式 [坐标(4) + 置信度(1) + 类别(num_classes)]
+            # 添加objectness置信度
+            objectness = jt.max(cls_score_list, dim=-1)
+            if isinstance(objectness, tuple):
+                objectness = objectness[0]
+            if len(objectness.shape) == 2:
+                objectness = objectness.unsqueeze(-1)
+
+            # 合并为YOLO格式：[坐标(4) + 置信度(1) + 类别(num_classes)]
+            yolo_output = jt.concat([pred_bboxes, objectness, cls_score_list], dim=-1)
+            return yolo_output
 
 
 def build_effidehead_layer(channels_list, num_anchors, num_classes, reg_max=16, num_layers=3):

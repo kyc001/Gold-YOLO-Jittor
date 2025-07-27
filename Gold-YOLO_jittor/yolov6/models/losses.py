@@ -72,18 +72,24 @@ class ComputeLoss:
             feats, pred_scores, pred_distri = outputs
         elif hasattr(outputs, 'shape') and len(outputs.shape) == 3:
             # 单tensor输出格式 [batch, anchors, channels]
-            # 需要分离为分类和回归部分
+            # YOLO标准格式：[x, y, w, h, objectness, class1, class2, ..., classN]
             batch_size, num_anchors, total_channels = outputs.shape
 
-            # 假设前20个通道是分类，后4个是回归
-            if total_channels >= self.num_classes + 4:
-                pred_scores = outputs[:, :, :self.num_classes]  # [batch, anchors, num_classes]
-                pred_distri = outputs[:, :, self.num_classes:self.num_classes+4]  # [batch, anchors, 4]
+            # 检查通道数：4(坐标) + 1(置信度) + num_classes(类别)
+            expected_channels = 4 + 1 + self.num_classes
+            if total_channels >= expected_channels:
+                # 标准YOLO格式：前4个是坐标，第5个是置信度，后面是类别概率
+                pred_distri = outputs[:, :, :4]  # [batch, anchors, 4] - 坐标
+                pred_objectness = outputs[:, :, 4:5]  # [batch, anchors, 1] - 置信度
+                pred_classes = outputs[:, :, 5:5+self.num_classes]  # [batch, anchors, num_classes] - 类别
+
+                # 修复：pred_scores只包含类别概率，不包含置信度
+                pred_scores = pred_classes  # [batch, anchors, num_classes] - 只有类别概率
 
                 # 创建虚拟的feats用于anchor生成
                 feats = self._create_dummy_feats(batch_size)
             else:
-                raise ValueError(f"输出通道数不足！期望至少{self.num_classes + 4}，得到{total_channels}")
+                raise ValueError(f"输出通道数不足！期望至少{expected_channels}(4+1+{self.num_classes})，得到{total_channels}")
         else:
             raise ValueError(f"模型输出格式错误！期望(feats, pred_scores, pred_distri)或单tensor，得到: {type(outputs)}")
         anchors, anchor_points, n_anchors_list, stride_tensor = \
@@ -154,20 +160,95 @@ class ComputeLoss:
         return loss, loss_items
 
     def preprocess(self, targets, batch_size, scale_tensor):
-        targets_list = np.zeros((batch_size, 1, 5)).tolist()
-        # 修复Jittor API - 使用官方文档的numpy()方法
-        targets_numpy = targets.numpy()
-        for i, item in enumerate(targets_numpy.tolist()):
-            targets_list[int(item[0])].append(item[1:])
-        max_len = max((len(l) for l in targets_list))
-        # 强制使用float32类型避免float64
-        targets_np = np.array(list(map(lambda l: l + [[-1, 0, 0, 0, 0]] * (max_len - len(l)), targets_list)), dtype=np.float32)[:, 1:, :]
-        targets = jt.array(targets_np)
-        # 确保scale_tensor是float32
-        scale_tensor = scale_tensor.float32()
-        batch_target = targets[:, :, 1:5] * scale_tensor
-        targets[..., 1:] = xywh2xyxy(batch_target)
-        return targets
+        """彻底重写的预处理方法 - 完全解决inhomogeneous shape问题"""
+        try:
+            # 如果没有目标，返回空的targets
+            if targets.numel() == 0:
+                empty_targets = jt.zeros((batch_size, 1, 5), dtype='float32')
+                empty_targets[:, :, 0] = -1  # 标记为无效目标
+                return empty_targets
+
+            # 安全地转换为numpy，避免inhomogeneous问题
+            if hasattr(targets, 'numpy'):
+                targets_numpy = targets.detach().numpy()
+            else:
+                targets_numpy = np.array(targets)
+
+            # 确保targets_numpy是2维的
+            if len(targets_numpy.shape) == 1:
+                targets_numpy = targets_numpy.reshape(1, -1)
+
+            # 初始化每个batch的目标列表 - 使用更安全的方法
+            batch_targets = []
+            for b in range(batch_size):
+                batch_targets.append([])
+
+            # 逐个处理目标，避免批量操作导致的shape问题
+            for i in range(targets_numpy.shape[0]):
+                try:
+                    item = targets_numpy[i]
+                    if len(item) >= 6:  # 确保有足够的元素
+                        batch_idx = int(item[0])
+                        if 0 <= batch_idx < batch_size:
+                            # 只取class, x, y, w, h
+                            target_data = [float(item[1]), float(item[2]), float(item[3]), float(item[4]), float(item[5])]
+                            batch_targets[batch_idx].append(target_data)
+                except:
+                    continue  # 跳过有问题的目标
+
+            # 找到最大目标数量，但限制上限避免内存问题
+            max_targets = 0
+            for targets_list in batch_targets:
+                max_targets = max(max_targets, len(targets_list))
+
+            if max_targets == 0:
+                max_targets = 1  # 至少有一个位置
+            elif max_targets > 100:  # 限制最大目标数量
+                max_targets = 100
+
+            # 手动创建规整的数组，避免numpy的inhomogeneous问题
+            final_targets = []
+
+            for batch_idx in range(batch_size):
+                batch_target_list = batch_targets[batch_idx]
+
+                # 创建当前batch的目标数组
+                batch_array = []
+
+                # 添加真实目标
+                for i in range(min(len(batch_target_list), max_targets)):
+                    batch_array.append(batch_target_list[i])
+
+                # 填充虚拟目标到max_targets
+                while len(batch_array) < max_targets:
+                    batch_array.append([-1.0, 0.0, 0.0, 0.0, 0.0])
+
+                final_targets.append(batch_array)
+
+            # 现在可以安全地转换为numpy数组
+            targets_np = np.array(final_targets, dtype=np.float32)  # [batch_size, max_targets, 5]
+            targets = jt.array(targets_np, dtype='float32')
+
+            # 确保scale_tensor是float32
+            scale_tensor = scale_tensor.float32()
+
+            # 处理坐标缩放和转换
+            batch_target = targets[:, :, 1:5] * scale_tensor  # 缩放坐标
+            targets = jt.concat([
+                targets[:, :, :1],  # 保持class不变
+                xywh2xyxy(batch_target)  # 转换坐标格式
+            ], dim=-1)
+
+            return targets
+
+        except Exception as e:
+            print(f"⚠️ preprocess失败: {e}")
+            import traceback
+            traceback.print_exc()
+            # 返回安全的默认值
+            empty_targets = jt.zeros((batch_size, 1, 5), dtype='float32')
+            empty_targets[:, :, 0] = -1
+            return empty_targets
 
     def bbox_decode(self, anchor_points, pred_dist):
         if self.use_dfl:

@@ -165,9 +165,10 @@ class Inferer:
         image = letterbox(img_src, img_size, stride=stride)[0]
         # Convert
         image = image.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
-        image = jt.array(image)  # 使用jt.array替代torch.from_numpy
+        # 修复：确保数据类型正确转换，避免int进入卷积层
+        image = jt.array(image, dtype='float32')  # 强制转换为float32
         image = image.half() if half else image.float()  # uint8 to fp16/32
-        image /= 255  # 0 - 255 to 0.0 - 1.0
+        image /= 255.0  # 0 - 255 to 0.0 - 1.0
         
         return image, img_src
     
