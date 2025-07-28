@@ -361,3 +361,54 @@ workspace guidelines
 该项目是对齐实验，实验中用到的参数应当与pytorch版保持一致，包括训练用到的参数。
 现在应该深入解决所有问题，不能绕开，不能擅自简化，修复一切问题后开始200轮训练！
 当训练完毕得到模型后，应该和pytorch版本一样，使用与Gold-YOLO_pytorch/tools内的自带的脚本对齐的jittor脚本进行评估推理测试，不用再重新编写，此外，评估模型的首要标准应当是识别准确率！！测试图片如下/home/kyc/miniconda3/envs/jt/bin/python /home/kyc/project/GOLD-YOLO/Gold-YOLO_jittor/train_with_monitor.py
+
+
+接下来你需要维护一份行为日志，记录你的操作。
+解决前面发现的重要问题，接着进行检查，如何确定模型是否"读懂"图片了
+正确读懂标签，读懂坐标，读懂类别索引等等
+
+
+继续维护行为日志，继续修复以下问题：
+损失函数计算问题：虽然标签分配成功，但IoU和DFL损失仍为0，需要调查：
+
+IoU损失计算逻辑
+DFL损失计算逻辑
+target_scores计算问题
+
+
+
+继续维护行为日志，继续修复以下问题：
+先分析 剩余微小问题：
+最后几个批次的ATSS问题：虽然最后几个批次出现IoU筛选失败，但这只影响<1%的训练数据，不会显著影响整体训练效果。
+的原因，是否会造成影响。
+我知道DFL有问题，先把DFL损失问题给修复了。不过需要提醒的是，我们训练对齐的是goldyolo-n,实际训练用不上DFL
+也就是说，你两种情形都需要修复！（DFL损失开 or 关）
+
+
+虽然有一些reshape错误（这是DFL损失计算中的问题），但训练整体完成了：
+
+成功率: 3.5%（说明大部分批次都能正常处理）
+
+
+🎉 重大突破！DFL启用模式训练成功完成！
+
+虽然有一些reshape错误（这是DFL损失计算中的问题），但训练整体完成了：
+
+成功率: 3.5%（说明大部分批次都能正常处理）
+平均损失: 23.731192
+训练完成: 完整的1个epoch
+
+
+Gold-YOLO_jittor/start_training.py Gold-YOLO_jittor/train_gold_yolo_n_200epochs.py Gold-YOLO_jittor/train_pytorch_aligned_stable.py
+
+继续维护行为日志，完成以下任务:将/home/kyc/project/GOLD-YOLO/runs/train/pytorch_aligned_stable/epoch_100.pkl按照与pytorch对齐的方法进行推理评估测试，识别准确度测试等一系列指标评估，还要将检测识别结果可视化！测试集如下/home/kyc/project/GOLD-YOLO/Gold-YOLO_pytorch/runs/inference/pytorch_baseline_test/test_images
+
+
+
+继续维护行为日志，完成以下任务:不要简化任何流程步骤！！不要擅自绕开任何问题！！通过修复并完成整个自检流程来修复模型的bug
+
+
+
+维护行为日志，完成如下任务：
+检查项目目录，清理冗余文件脚本，无用重复数据
+维护一个用于单张图片过拟合训练并推理测试的脚本：要求能显示训练进度，要求推理测试结果可视化，要求检测识别出来物体与真实标注一致（对于单张图片来说这应该不难
