@@ -67,8 +67,33 @@ class ATSSAssigner(nn.Module):
         if anc_bboxes.shape[-1] != 4:
             raise ValueError(f"Anchor bboxes最后维度不是4: {anc_bboxes.shape}")
 
+        # 详细调试IoU计算的输入
+        print(f"🔍 [IoU输入] gt_bboxes_flat形状: {gt_bboxes_flat.shape}, 数值范围: [{float(gt_bboxes_flat.min().data):.6f}, {float(gt_bboxes_flat.max().data):.6f}]")
+        print(f"🔍 [IoU输入] anc_bboxes形状: {anc_bboxes.shape}, 数值范围: [{float(anc_bboxes.min().data):.1f}, {float(anc_bboxes.max().data):.1f}]")
+
+        # 检查前几个GT框和anchor框的具体数值
+        if gt_bboxes_flat.shape[0] > 0:
+            print(f"🔍 [IoU输入] 第一个GT框: {gt_bboxes_flat[0].numpy()}")
+            print(f"🔍 [IoU输入] 前3个anchor框: {anc_bboxes[:3].numpy()}")
+
+        # 检测坐标系统不匹配问题
+        gt_max = float(gt_bboxes_flat.max().data)
+        anc_max = float(anc_bboxes.max().data)
+        if gt_max <= 1.0 and anc_max > 100.0:
+            print(f"🚨 [坐标系统错误] GT框是归一化坐标({gt_max:.3f})，但anchor是像素坐标({anc_max:.1f})")
+            print(f"🔧 [坐标修复] 将GT框转换为像素坐标")
+            gt_bboxes_flat = gt_bboxes_flat * 640.0
+            print(f"🔧 [坐标修复] 修复后GT框数值范围: [{float(gt_bboxes_flat.min().data):.1f}, {float(gt_bboxes_flat.max().data):.1f}]")
+            print(f"🔧 [坐标修复] 修复后第一个GT框: {gt_bboxes_flat[0].numpy()}")
+
         overlaps = iou2d_calculator(gt_bboxes_flat, anc_bboxes)
         overlaps = overlaps.reshape([self.bs, -1, self.n_anchors])
+
+        # 调试IoU计算结果
+        print(f"🔍 [ATSS-IoU] overlaps形状: {overlaps.shape}, 数值范围: [{float(overlaps.min().data):.6f}, {float(overlaps.max().data):.6f}]")
+        print(f"🔍 [ATSS-IoU] overlaps非零数量: {int((overlaps > 0).sum().data)}")
+        print(f"🔍 [ATSS-IoU] overlaps>0.01数量: {int((overlaps > 0.01).sum().data)}")
+        print(f"🔍 [ATSS-IoU] overlaps>0.1数量: {int((overlaps > 0.1).sum().data)}")
 
         distances, ac_points = dist_calculator(gt_bboxes_flat, anc_bboxes)
 
@@ -98,8 +123,14 @@ class ATSSAssigner(nn.Module):
         is_in_candidate, candidate_idxs = self.select_topk_candidates(
             distances, n_level_bboxes, mask_gt)
 
+        print(f"🔍 [ATSS-候选] is_in_candidate形状: {is_in_candidate.shape}, 候选数量: {int(is_in_candidate.sum().data)}")
+        print(f"🔍 [ATSS-候选] candidate_idxs形状: {candidate_idxs.shape}")
+
         overlaps_thr_per_gt, iou_candidates = self.thres_calculator(
             is_in_candidate, candidate_idxs, overlaps)
+
+        print(f"🔍 [ATSS-阈值] overlaps_thr_per_gt形状: {overlaps_thr_per_gt.shape}, 数值范围: [{float(overlaps_thr_per_gt.min().data):.6f}, {float(overlaps_thr_per_gt.max().data):.6f}]")
+        print(f"🔍 [ATSS-阈值] iou_candidates形状: {iou_candidates.shape}, 数值范围: [{float(iou_candidates.min().data):.6f}, {float(iou_candidates.max().data):.6f}]")
 
         # select candidates iou >= threshold as positive
         # 修复形状不匹配问题 - 根据实际形状调整
@@ -120,25 +151,61 @@ class ATSSAssigner(nn.Module):
         if zeros_for_is_pos.shape != is_in_candidate.shape:
             zeros_for_is_pos = jt.zeros(is_in_candidate.shape, dtype=is_in_candidate.dtype)
 
+        # 详细调试IoU阈值筛选过程
+        print(f"🔍 [ATSS-阈值筛选] iou_candidates数值范围: [{float(iou_candidates.min().data):.6f}, {float(iou_candidates.max().data):.6f}]")
+        print(f"🔍 [ATSS-阈值筛选] overlaps_thr_expanded数值范围: [{float(overlaps_thr_expanded.min().data):.6f}, {float(overlaps_thr_expanded.max().data):.6f}]")
+
+        # 检查有多少候选的IoU大于阈值
+        iou_above_threshold = (iou_candidates > overlaps_thr_expanded).sum()
+        print(f"🔍 [ATSS-阈值筛选] IoU大于阈值的候选数: {int(iou_above_threshold.data)}")
+
         is_pos = jt.where(
             iou_candidates > overlaps_thr_expanded,
             is_in_candidate, zeros_for_is_pos)
 
+        print(f"🔍 [ATSS-正样本] is_pos形状: {is_pos.shape}, 正样本候选数: {int(is_pos.sum().data)}")
+
         is_in_gts = select_candidates_in_gts(ac_points, gt_bboxes)
-        mask_pos = is_pos * is_in_gts * mask_gt
+        print(f"🔍 [ATSS-GT内] is_in_gts形状: {is_in_gts.shape}, GT内候选数: {int(is_in_gts.sum().data)}")
+
+        # 详细调试最终筛选过程
+        print(f"🔍 [ATSS-最终筛选] mask_gt形状: {mask_gt.shape}, 有效GT数: {int(mask_gt.sum().data)}")
+
+        # 分步检查筛选条件
+        step1 = is_pos * is_in_gts
+        step2 = step1 * mask_gt
+        print(f"🔍 [ATSS-最终筛选] is_pos * is_in_gts = {int(step1.sum().data)}")
+        print(f"🔍 [ATSS-最终筛选] (is_pos * is_in_gts) * mask_gt = {int(step2.sum().data)}")
+
+        mask_pos = step2
+        print(f"🔍 [ATSS-最终] mask_pos形状: {mask_pos.shape}, 最终正样本数: {int(mask_pos.sum().data)}")
 
         target_gt_idx, fg_mask, mask_pos = select_highest_overlaps(
             mask_pos, overlaps, self.n_max_boxes)
+
+        print(f"🔍 [ATSS-结果] fg_mask形状: {fg_mask.shape}, 最终正样本数: {int(fg_mask.sum().data)}")
 
         # assigned target
         target_labels, target_bboxes, target_scores = self.get_targets(
             gt_labels, gt_bboxes, target_gt_idx, fg_mask)
 
-        # soft label with iou
+        # soft label with iou - 修复训练初期IoU为0的问题
         if pd_bboxes is not None:
+            print(f"🔍 [IoU软标签] pd_bboxes不为None，计算IoU软标签")
             ious = iou_calculator(gt_bboxes, pd_bboxes) * mask_pos
             ious = ious.max(dim=-2)[0].unsqueeze(-1)
-            target_scores *= ious
+            print(f"🔍 [IoU软标签] ious形状: {ious.shape}, 数值范围: [{float(ious.min().data):.6f}, {float(ious.max().data):.6f}]")
+            print(f"🔍 [IoU软标签] target_scores乘法前总和: {float(target_scores.sum().data):.6f}")
+
+            # 修复训练初期IoU为0的问题：设置IoU下限，避免target_scores被完全清零
+            iou_threshold = 0.1  # IoU下限阈值
+            ious_clamped = jt.clamp(ious, min_v=iou_threshold)
+            print(f"🔍 [IoU软标签] ious_clamped数值范围: [{float(ious_clamped.min().data):.6f}, {float(ious_clamped.max().data):.6f}]")
+
+            target_scores *= ious_clamped
+            print(f"🔍 [IoU软标签] target_scores乘法后总和: {float(target_scores.sum().data):.6f}")
+        else:
+            print(f"🔍 [IoU软标签] pd_bboxes为None，跳过IoU软标签计算")
 
         return target_labels.long(), target_bboxes, target_scores, fg_mask.bool()
 
@@ -234,6 +301,13 @@ class ATSSAssigner(nn.Module):
         overlaps_std_per_gt = candidate_overlaps.std(dim=-1, keepdim=True)
         overlaps_thr_per_gt = overlaps_mean_per_gt + overlaps_std_per_gt
 
+        # 详细调试阈值计算过程
+        print(f"🔍 [阈值计算] candidate_overlaps形状: {candidate_overlaps.shape}")
+        print(f"🔍 [阈值计算] candidate_overlaps数值范围: [{float(candidate_overlaps.min().data):.6f}, {float(candidate_overlaps.max().data):.6f}]")
+        print(f"🔍 [阈值计算] overlaps_mean_per_gt: [{float(overlaps_mean_per_gt.min().data):.6f}, {float(overlaps_mean_per_gt.max().data):.6f}]")
+        print(f"🔍 [阈值计算] overlaps_std_per_gt: [{float(overlaps_std_per_gt.min().data):.6f}, {float(overlaps_std_per_gt.max().data):.6f}]")
+        print(f"🔍 [阈值计算] overlaps_thr_per_gt: [{float(overlaps_thr_per_gt.min().data):.6f}, {float(overlaps_thr_per_gt.max().data):.6f}]")
+
         return overlaps_thr_per_gt, _candidate_overlaps
 
     def get_targets(self,
@@ -260,8 +334,32 @@ class ATSSAssigner(nn.Module):
         target_bboxes = gt_bboxes.reshape([-1, 4])[target_gt_idx.flatten()]
         target_bboxes = target_bboxes.reshape([self.bs, self.n_anchors, 4])
 
-        # assigned target scores
-        target_scores = nn.one_hot(target_labels.long(), self.num_classes + 1).float()
-        target_scores = target_scores[:, :, :self.num_classes]
+        # assigned target scores - 修复one_hot编码问题
+        print(f"🔍 [target_scores计算] target_labels形状: {target_labels.shape}, 数值范围: [{float(target_labels.min().data):.1f}, {float(target_labels.max().data):.1f}]")
+        print(f"🔍 [target_scores计算] self.num_classes: {self.num_classes}, self.bg_idx: {self.bg_idx}")
+        print(f"🔍 [target_scores计算] fg_mask正样本数: {int(fg_mask.sum().data)}")
+
+        # 使用正确的one_hot编码方式
+        # 首先将背景类标签(self.bg_idx)替换为0，因为one_hot不应该包含背景类
+        target_labels_for_onehot = jt.where(
+            target_labels == self.bg_idx,
+            jt.zeros_like(target_labels),  # 背景类设为0
+            target_labels
+        )
+
+        # 创建one_hot编码，只包含前景类
+        target_scores = nn.one_hot(target_labels_for_onehot.long(), self.num_classes).float()
+
+        # 对于背景类位置，将所有类别概率设为0
+        bg_mask = (target_labels == self.bg_idx).unsqueeze(-1).repeat([1, 1, self.num_classes])
+        target_scores = jt.where(bg_mask, jt.zeros_like(target_scores), target_scores)
+
+        # 只保留正样本的target_scores，负样本全部设为0
+        fg_mask_expanded = fg_mask.unsqueeze(-1).repeat([1, 1, self.num_classes])
+        target_scores = jt.where(fg_mask_expanded, target_scores, jt.zeros_like(target_scores))
+
+        print(f"🔍 [target_scores计算] target_scores形状: {target_scores.shape}, 数值范围: [{float(target_scores.min().data):.6f}, {float(target_scores.max().data):.6f}]")
+        print(f"🔍 [target_scores计算] target_scores非零数量: {int((target_scores > 0).sum().data)}")
+        print(f"🔍 [target_scores计算] target_scores总和: {float(target_scores.sum().data):.6f}")
 
         return target_labels, target_bboxes, target_scores

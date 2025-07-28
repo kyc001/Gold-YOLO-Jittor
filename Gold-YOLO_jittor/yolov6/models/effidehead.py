@@ -176,10 +176,15 @@ def build_effidehead_layer(channels_list, num_anchors, num_classes, reg_max=16, 
             kernel_size=1
         ))
 
-        # reg_pred
+        # reg_pred - 根据DFL配置动态调整输出维度
+        if reg_max > 0:  # DFL启用时
+            reg_out_channels = 4 * (reg_max + 1)  # DFL模式：每个坐标有(reg_max+1)个分布参数
+        else:  # DFL禁用时
+            reg_out_channels = 4 * num_anchors    # 传统模式：每个anchor有4个坐标
+
         head_layers.append(nn.Conv2d(
             in_channels=ch,
-            out_channels=4 * (reg_max + num_anchors),
+            out_channels=reg_out_channels,
             kernel_size=1
         ))
 

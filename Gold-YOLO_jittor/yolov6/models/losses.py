@@ -128,9 +128,17 @@ class ComputeLoss:
         print(f"   batch_size: {batch_size}")
         print(f"   gt_bboxes_scale: {gt_bboxes_scale.numpy()}")
 
+        # 添加预处理前的调试
+        print(f"🔍 [预处理前] targets形状: {targets.shape}")
+        print(f"🔍 [预处理前] targets数值范围: [{float(targets.min().data):.6f}, {float(targets.max().data):.6f}]")
+        if targets.shape[0] > 0:
+            print(f"🔍 [预处理前] 前3个目标: {targets[:3].numpy()}")
+
         targets = self.preprocess(targets, batch_size, gt_bboxes_scale)
-        print(f"   预处理后targets形状: {targets.shape}")
-        print(f"   targets数值范围: [{float(targets.min().data):.6f}, {float(targets.max().data):.6f}]")
+        print(f"🔍 [预处理后] targets形状: {targets.shape}")
+        print(f"🔍 [预处理后] targets数值范围: [{float(targets.min().data):.6f}, {float(targets.max().data):.6f}]")
+        if targets.shape[1] > 0:
+            print(f"🔍 [预处理后] 前3个目标: {targets[0, :3].numpy()}")
 
         gt_labels = targets[:, :, :1]
         gt_bboxes = targets[:, :, 1:]  # xyxy
@@ -147,7 +155,22 @@ class ComputeLoss:
 
         # 标签分配
         try:
+            print(f"🔍 [标签分配] epoch_num={epoch_num}, warmup_epoch={self.warmup_epoch}")
+            print(f"🔍 [标签分配] gt_labels形状: {gt_labels.shape}, 数值范围: [{float(gt_labels.min().data):.6f}, {float(gt_labels.max().data):.6f}]")
+            print(f"🔍 [标签分配] gt_bboxes形状: {gt_bboxes.shape}, 数值范围: [{float(gt_bboxes.min().data):.6f}, {float(gt_bboxes.max().data):.6f}]")
+            print(f"🔍 [标签分配] mask_gt形状: {mask_gt.shape}, 有效目标数: {int(mask_gt.sum().data)}")
+
             if epoch_num < self.warmup_epoch:
+                print(f"🔍 [标签分配] 使用warmup_assigner (ATSSAssigner)")
+                print(f"🔍 [标签分配] anchors形状: {anchors.shape}, 数值范围: [{float(anchors.min().data):.1f}, {float(anchors.max().data):.1f}]")
+                print(f"🔍 [标签分配] n_anchors_list: {n_anchors_list}")
+                print(f"🔍 [标签分配] pred_bboxes形状: {pred_bboxes.shape}, 数值范围: [{float(pred_bboxes.min().data):.1f}, {float(pred_bboxes.max().data):.1f}]")
+
+                # 详细调试ATSSAssigner的输入
+                pred_bboxes_scaled = pred_bboxes.detach() * stride_tensor
+                print(f"🔍 [ATSS输入] pred_bboxes_scaled形状: {pred_bboxes_scaled.shape}, 数值范围: [{float(pred_bboxes_scaled.min().data):.1f}, {float(pred_bboxes_scaled.max().data):.1f}]")
+                print(f"🔍 [ATSS输入] stride_tensor形状: {stride_tensor.shape}, 数值: {stride_tensor[:5].flatten().numpy()}")
+
                 target_labels, target_bboxes, target_scores, fg_mask = \
                     self.warmup_assigner(
                             anchors,
@@ -155,8 +178,18 @@ class ComputeLoss:
                             gt_labels,
                             gt_bboxes,
                             mask_gt,
-                            pred_bboxes.detach() * stride_tensor)
+                            pred_bboxes_scaled)
+
+                print(f"🔍 [ATSS输出] target_labels形状: {target_labels.shape}, 数值范围: [{float(target_labels.min().data):.1f}, {float(target_labels.max().data):.1f}]")
+                print(f"🔍 [ATSS输出] target_bboxes形状: {target_bboxes.shape}, 数值范围: [{float(target_bboxes.min().data):.1f}, {float(target_bboxes.max().data):.1f}]")
+                print(f"🔍 [ATSS输出] target_scores形状: {target_scores.shape}, 数值范围: [{float(target_scores.min().data):.6f}, {float(target_scores.max().data):.6f}]")
+                print(f"🔍 [ATSS输出] fg_mask形状: {fg_mask.shape}, 正样本数: {int(fg_mask.sum().data)}")
             else:
+                print(f"🔍 [标签分配] 使用formal_assigner (TaskAlignedAssigner)")
+                print(f"🔍 [标签分配] pred_scores形状: {pred_scores.shape}")
+                print(f"🔍 [标签分配] pred_bboxes形状: {pred_bboxes.shape}")
+                print(f"🔍 [标签分配] anchor_points形状: {anchor_points.shape}")
+
                 target_labels, target_bboxes, target_scores, fg_mask = \
                     self.formal_assigner(
                             pred_scores.detach(),
@@ -290,9 +323,18 @@ class ComputeLoss:
                     if len(item) >= 6:  # 确保有足够的元素
                         batch_idx = int(item[0])
                         if 0 <= batch_idx < batch_size:
-                            # 只取class, x, y, w, h (兼容6列和7列格式)
-                            target_data = [float(item[1]), float(item[2]), float(item[3]), float(item[4]), float(item[5])]
+                            # 修复关键bug：正确的数据格式是 [batch_idx, ?, class_id, x, y, w, h]
+                            # 对于7列格式：item[2]是class_id, item[3:7]是坐标
+                            if len(item) >= 7:  # 7列格式
+                                target_data = [float(item[2]), float(item[3]), float(item[4]), float(item[5]), float(item[6])]
+                            else:  # 6列格式
+                                target_data = [float(item[1]), float(item[2]), float(item[3]), float(item[4]), float(item[5])]
+
                             batch_targets[batch_idx].append(target_data)
+
+                            # 调试：验证修复后的数据
+                            if i < 3:
+                                print(f"🔧 [修复后] 目标{i}: class_id={target_data[0]}, coords=[{target_data[1]:.6f}, {target_data[2]:.6f}, {target_data[3]:.6f}, {target_data[4]:.6f}]")
 
                             # 调试：打印前几个目标的数据
                             if i < 3:
@@ -345,11 +387,24 @@ class ComputeLoss:
             # print(f"🔍 [坐标转换] 缩放前数值范围: [{float(targets[:, :, 1:5].min().data):.6f}, {float(targets[:, :, 1:5].max().data):.6f}]")
             # print(f"🔍 [坐标转换] scale_tensor: {scale_tensor.numpy()}")
 
-            batch_target = targets[:, :, 1:5] * scale_tensor  # 缩放坐标
-            # print(f"🔍 [坐标转换] 缩放后batch_target形状: {batch_target.shape}")
-            # print(f"🔍 [坐标转换] 缩放后数值范围: [{float(batch_target.min().data):.6f}, {float(batch_target.max().data):.6f}]")
+            # 详细调试缩放过程
+            coords_before = targets[:, :, 1:5]
+            print(f"🔍 [缩放调试] 缩放前坐标形状: {coords_before.shape}")
+            print(f"🔍 [缩放调试] 缩放前数值范围: [{float(coords_before.min().data):.6f}, {float(coords_before.max().data):.6f}]")
+            print(f"🔍 [缩放调试] scale_tensor形状: {scale_tensor.shape}, 值: {scale_tensor.numpy()}")
+            if coords_before.shape[1] > 0:
+                print(f"🔍 [缩放调试] 缩放前第一个目标: {coords_before[0, 0, :].numpy()}")
+
+            batch_target = coords_before * scale_tensor  # 缩放坐标
+            print(f"🔍 [坐标转换] 缩放后batch_target形状: {batch_target.shape}")
+            print(f"🔍 [坐标转换] 缩放后数值范围: [{float(batch_target.min().data):.6f}, {float(batch_target.max().data):.6f}]")
+            if batch_target.shape[1] > 0:
+                print(f"🔍 [坐标转换] 缩放后第一个目标: {batch_target[0, 0, :].numpy()}")
+                print(f"🔍 [坐标转换] 缩放后前3个目标: {batch_target[0, :3, :].numpy()}")
 
             xyxy_coords = xywh2xyxy(batch_target)  # 转换坐标格式
+            print(f"🔍 [坐标转换] xywh2xyxy后数值范围: [{float(xyxy_coords.min().data):.6f}, {float(xyxy_coords.max().data):.6f}]")
+            print(f"🔍 [坐标转换] xywh2xyxy后前3个目标: {xyxy_coords[0, :3, :].numpy()}")
             # print(f"🔍 [坐标转换] xywh2xyxy后形状: {xyxy_coords.shape}")
             # print(f"🔍 [坐标转换] xywh2xyxy后数值范围: [{float(xyxy_coords.min().data):.6f}, {float(xyxy_coords.max().data):.6f}]")
 
@@ -443,6 +498,8 @@ class BboxLoss(nn.Module):
         # select positive samples mask
         num_pos = fg_mask.sum()
         num_pos_scalar = float(num_pos.data)  # Jittor方式获取标量值
+        print(f"🔍 [IoU损失调试] fg_mask正样本数: {num_pos_scalar}")
+        print(f"🔍 [IoU损失调试] target_scores_sum: {float(target_scores_sum.data):.6f}")
         if num_pos_scalar > 0:
             # iou loss - 修复Jittor API，用索引替代masked_select
             bbox_mask = fg_mask.unsqueeze(-1).repeat([1, 1, 4])
@@ -480,11 +537,27 @@ class BboxLoss(nn.Module):
             except:
                 loss_iou = jt.clamp(loss_iou, 0.0, 10.0)
 
-            # dfl loss
+            # dfl loss - 详细调试reshape问题
             if self.use_dfl and pos_indices.shape[0] > 0:
+                print(f"🔍 [DFL调试] pred_dist形状: {pred_dist.shape}")
+                print(f"🔍 [DFL调试] pos_indices形状: {pos_indices.shape}")
+                print(f"🔍 [DFL调试] self.reg_max: {self.reg_max}")
+
                 # 使用Jittor方式实现masked_select
                 pred_dist_pos = pred_dist[pos_indices[:, 0], pos_indices[:, 1]]  # [num_pos, (reg_max+1)*4]
-                pred_dist_pos = pred_dist_pos.reshape([-1, 4, self.reg_max + 1])
+                print(f"🔍 [DFL调试] pred_dist_pos形状: {pred_dist_pos.shape}")
+                print(f"🔍 [DFL调试] 期望reshape为: [-1, 4, {self.reg_max + 1}]")
+
+                # 检查尺寸是否匹配
+                expected_size = pred_dist_pos.shape[0] * 4 * (self.reg_max + 1)
+                actual_size = pred_dist_pos.numel()
+                print(f"🔍 [DFL调试] 实际大小: {actual_size}, 期望大小: {expected_size}")
+
+                if actual_size != expected_size:
+                    print(f"🚨 [DFL错误] 尺寸不匹配！跳过DFL损失计算")
+                    loss_dfl = jt.array(0.0)
+                else:
+                    pred_dist_pos = pred_dist_pos.reshape([-1, 4, self.reg_max + 1])
 
                 target_ltrb = bbox2dist(anchor_points, target_bboxes, self.reg_max)
                 target_ltrb_pos = target_ltrb[pos_indices[:, 0], pos_indices[:, 1]]  # [num_pos, 4]

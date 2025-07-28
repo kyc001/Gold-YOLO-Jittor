@@ -310,11 +310,11 @@ def main():
         # 创建数据集
         from yolov6.data.datasets import TrainValDataset
         
-        # 严格对齐PyTorch版本的数据增强参数
+        # 临时调整数据增强参数以解决极小目标问题
         hyp = {
-            'mosaic': 1.0, 'mixup': 0.0, 'degrees': 0.0, 'translate': 0.1,  # 对齐PyTorch: mixup=0.0, degrees=0.0
-            'scale': 0.5, 'shear': 0.0, 'flipud': 0.0, 'fliplr': 0.5,      # 对齐PyTorch: shear=0.0
-            'hsv_h': 0.015, 'hsv_s': 0.7, 'hsv_v': 0.4                     # 对齐PyTorch
+            'mosaic': 0.0, 'mixup': 0.0, 'degrees': 0.0, 'translate': 0.0,  # 暂时禁用mosaic和translate
+            'scale': 0.0, 'shear': 0.0, 'flipud': 0.0, 'fliplr': 0.0,      # 暂时禁用所有几何变换
+            'hsv_h': 0.0, 'hsv_s': 0.0, 'hsv_v': 0.0                       # 暂时禁用颜色增强
         }
         
         train_dataset = TrainValDataset(
@@ -351,8 +351,8 @@ def main():
             num_classes=num_classes,
             ori_img_size=640,
             warmup_epoch=4,
-            use_dfl=False,
-            reg_max=0,
+            use_dfl=False,  # gold-yolo-n原始配置：禁用DFL
+            reg_max=0,      # gold-yolo-n原始配置：reg_max=0
             iou_type='giou',
             loss_weight={'class': 1.0, 'iou': 2.5, 'dfl': 0.5}
         )
