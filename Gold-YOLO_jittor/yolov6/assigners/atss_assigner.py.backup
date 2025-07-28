@@ -67,12 +67,18 @@ class ATSSAssigner(nn.Module):
         if anc_bboxes.shape[-1] != 4:
             raise ValueError(f"Anchor bboxes最后维度不是4: {anc_bboxes.shape}")
 
+        # 详细调试IoU计算的输入
+        # 检查前几个GT框和anchor框的具体数值
+        if gt_bboxes_flat.shape[0] > 0:
         # 检测坐标系统不匹配问题
         gt_max = float(gt_bboxes_flat.max().data)
         anc_max = float(anc_bboxes.max().data)
         if gt_max <= 1.0 and anc_max > 100.0:
-            # 坐标系统不匹配，将GT框转换为像素坐标
+        # print(f"🚨 [坐标系统错误] GT框是归一化坐标({gt_max:.3f})，但anchor是像素坐标({anc_max:.1f})")
+        # print(f"🔧 [坐标修复] 将GT框转换为像素坐标")
             gt_bboxes_flat = gt_bboxes_flat * 640.0
+        # print(f"🔧 [坐标修复] 修复后GT框数值范围: [{float(gt_bboxes_flat.min().data):.1f}, {float(gt_bboxes_flat.max().data):.1f}]")
+        # print(f"🔧 [坐标修复] 修复后第一个GT框: {gt_bboxes_flat[0].numpy()}")
 
         overlaps = iou2d_calculator(gt_bboxes_flat, anc_bboxes)
         overlaps = overlaps.reshape([self.bs, -1, self.n_anchors])
@@ -145,14 +151,12 @@ class ATSSAssigner(nn.Module):
             gt_labels, gt_bboxes, target_gt_idx, fg_mask)
 
         # soft label with iou - 修复训练初期IoU为0的问题
-        if pd_bboxes is not None:
-            ious = iou_calculator(gt_bboxes, pd_bboxes) * mask_pos
+        if pd_bboxes is not None:            ious = iou_calculator(gt_bboxes, pd_bboxes) * mask_pos
             ious = ious.max(dim=-2)[0].unsqueeze(-1)
             # 修复训练初期IoU为0的问题：设置IoU下限，避免target_scores被完全清零
             iou_threshold = 0.1  # IoU下限阈值
             ious_clamped = jt.clamp(ious, min_v=iou_threshold)
-            target_scores *= ious_clamped
-
+            target_scores *= ious_clamped        else:
         return target_labels.long(), target_bboxes, target_scores, fg_mask.bool()
 
     def select_topk_candidates(self,

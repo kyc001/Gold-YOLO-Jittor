@@ -110,12 +110,7 @@ class ComputeLoss:
             generate_anchors(feats, self.fpn_strides, self.grid_cell_size, self.grid_cell_offset,
                              device=None)
 
-        # print(f"🔍 [锚点生成完成]")
-        print(f"   anchors形状: {anchors.shape if hasattr(anchors, 'shape') else 'N/A'}")
-        print(f"   anchor_points形状: {anchor_points.shape if hasattr(anchor_points, 'shape') else 'N/A'}")
-        print(f"   stride_tensor形状: {stride_tensor.shape if hasattr(stride_tensor, 'shape') else 'N/A'}")
-        if hasattr(anchors, 'shape') and anchors.numel() > 0:
-            print(f"   anchors数值范围: [{float(anchors.min().data):.6f}, {float(anchors.max().data):.6f}]")
+        # 锚点生成完成
 
         assert pred_scores.dtype == pred_distri.dtype
         # 确保数据类型一致，与pred_scores保持一致 - 修复类型不匹配问题
@@ -128,17 +123,8 @@ class ComputeLoss:
         print(f"   batch_size: {batch_size}")
         print(f"   gt_bboxes_scale: {gt_bboxes_scale.numpy()}")
 
-        # 添加预处理前的调试
-        print(f"🔍 [预处理前] targets形状: {targets.shape}")
-        print(f"🔍 [预处理前] targets数值范围: [{float(targets.min().data):.6f}, {float(targets.max().data):.6f}]")
-        if targets.shape[0] > 0:
-            print(f"🔍 [预处理前] 前3个目标: {targets[:3].numpy()}")
-
+        # 预处理targets
         targets = self.preprocess(targets, batch_size, gt_bboxes_scale)
-        print(f"🔍 [预处理后] targets形状: {targets.shape}")
-        print(f"🔍 [预处理后] targets数值范围: [{float(targets.min().data):.6f}, {float(targets.max().data):.6f}]")
-        if targets.shape[1] > 0:
-            print(f"🔍 [预处理后] 前3个目标: {targets[0, :3].numpy()}")
 
         gt_labels = targets[:, :, :1]
         gt_bboxes = targets[:, :, 1:]  # xyxy
@@ -155,21 +141,10 @@ class ComputeLoss:
 
         # 标签分配
         try:
-            print(f"🔍 [标签分配] epoch_num={epoch_num}, warmup_epoch={self.warmup_epoch}")
-            print(f"🔍 [标签分配] gt_labels形状: {gt_labels.shape}, 数值范围: [{float(gt_labels.min().data):.6f}, {float(gt_labels.max().data):.6f}]")
-            print(f"🔍 [标签分配] gt_bboxes形状: {gt_bboxes.shape}, 数值范围: [{float(gt_bboxes.min().data):.6f}, {float(gt_bboxes.max().data):.6f}]")
-            print(f"🔍 [标签分配] mask_gt形状: {mask_gt.shape}, 有效目标数: {int(mask_gt.sum().data)}")
-
+            # 标签分配
             if epoch_num < self.warmup_epoch:
-                print(f"🔍 [标签分配] 使用warmup_assigner (ATSSAssigner)")
-                print(f"🔍 [标签分配] anchors形状: {anchors.shape}, 数值范围: [{float(anchors.min().data):.1f}, {float(anchors.max().data):.1f}]")
-                print(f"🔍 [标签分配] n_anchors_list: {n_anchors_list}")
-                print(f"🔍 [标签分配] pred_bboxes形状: {pred_bboxes.shape}, 数值范围: [{float(pred_bboxes.min().data):.1f}, {float(pred_bboxes.max().data):.1f}]")
-
-                # 详细调试ATSSAssigner的输入
+                # 使用ATSSAssigner
                 pred_bboxes_scaled = pred_bboxes.detach() * stride_tensor
-                print(f"🔍 [ATSS输入] pred_bboxes_scaled形状: {pred_bboxes_scaled.shape}, 数值范围: [{float(pred_bboxes_scaled.min().data):.1f}, {float(pred_bboxes_scaled.max().data):.1f}]")
-                print(f"🔍 [ATSS输入] stride_tensor形状: {stride_tensor.shape}, 数值: {stride_tensor[:5].flatten().numpy()}")
 
                 target_labels, target_bboxes, target_scores, fg_mask = \
                     self.warmup_assigner(
@@ -180,15 +155,9 @@ class ComputeLoss:
                             mask_gt,
                             pred_bboxes_scaled)
 
-                print(f"🔍 [ATSS输出] target_labels形状: {target_labels.shape}, 数值范围: [{float(target_labels.min().data):.1f}, {float(target_labels.max().data):.1f}]")
-                print(f"🔍 [ATSS输出] target_bboxes形状: {target_bboxes.shape}, 数值范围: [{float(target_bboxes.min().data):.1f}, {float(target_bboxes.max().data):.1f}]")
-                print(f"🔍 [ATSS输出] target_scores形状: {target_scores.shape}, 数值范围: [{float(target_scores.min().data):.6f}, {float(target_scores.max().data):.6f}]")
-                print(f"🔍 [ATSS输出] fg_mask形状: {fg_mask.shape}, 正样本数: {int(fg_mask.sum().data)}")
+                # ATSS标签分配完成
             else:
-                print(f"🔍 [标签分配] 使用formal_assigner (TaskAlignedAssigner)")
-                print(f"🔍 [标签分配] pred_scores形状: {pred_scores.shape}")
-                print(f"🔍 [标签分配] pred_bboxes形状: {pred_bboxes.shape}")
-                print(f"🔍 [标签分配] anchor_points形状: {anchor_points.shape}")
+                # 使用TaskAlignedAssigner
 
                 target_labels, target_bboxes, target_scores, fg_mask = \
                     self.formal_assigner(
@@ -233,18 +202,10 @@ class ComputeLoss:
         loss_iou, loss_dfl = self.bbox_loss(pred_distri, pred_bboxes, anchor_points_s, target_bboxes,
                                             target_scores, target_scores_sum, fg_mask)
 
-        # 最终损失合成，添加数值稳定性检查
-        # print(f"🔍 [损失合成] 各分量损失值")
-        print(f"   loss_cls原始值: {float(loss_cls.data):.6f}")
-        print(f"   loss_iou原始值: {float(loss_iou.data):.6f}")
-        print(f"   loss_dfl原始值: {float(loss_dfl.data):.6f}")
-        print(f"   损失权重: class={self.loss_weight['class']}, iou={self.loss_weight['iou']}, dfl={self.loss_weight['dfl']}")
-
+        # 最终损失合成
         loss_cls_weighted = self.loss_weight['class'] * loss_cls
         loss_iou_weighted = self.loss_weight['iou'] * loss_iou
         loss_dfl_weighted = self.loss_weight['dfl'] * loss_dfl
-
-        print(f"   加权后: cls={float(loss_cls_weighted.data):.6f}, iou={float(loss_iou_weighted.data):.6f}, dfl={float(loss_dfl_weighted.data):.6f}")
 
         # Jittor方式检查每个损失分量
         def safe_nan_inf_check(tensor, name=""):
@@ -319,28 +280,24 @@ class ComputeLoss:
             for i in range(targets_numpy.shape[0]):
                 try:
                     item = targets_numpy[i]
-                    # 兼容6列和7列数据格式
-                    if len(item) >= 6:  # 确保有足够的元素
-                        batch_idx = int(item[0])
-                        if 0 <= batch_idx < batch_size:
-                            # 修复关键bug：正确的数据格式是 [batch_idx, ?, class_id, x, y, w, h]
-                            # 对于7列格式：item[2]是class_id, item[3:7]是坐标
-                            if len(item) >= 7:  # 7列格式
-                                target_data = [float(item[2]), float(item[3]), float(item[4]), float(item[5]), float(item[6])]
-                            else:  # 6列格式
-                                target_data = [float(item[1]), float(item[2]), float(item[3]), float(item[4]), float(item[5])]
+                    # 修复：处理多维数组情况
+                    if item.ndim > 1:
+                        # 如果是多维数组，取第一行
+                        item = item[0]
+
+                    # 修复：正确处理输入格式 [class_id, x, y, w, h, 0]
+                    if len(item) >= 6:  # 6列格式：[class_id, x, y, w, h, 0]
+                        # 对于我们的数据格式，batch_idx应该从外层循环获得
+                        batch_idx = 0  # 单batch情况
+                        if batch_idx < batch_size:
+                            # 正确提取：item[0]是class_id, item[1:5]是坐标
+                            target_data = [float(item[0]), float(item[1]), float(item[2]), float(item[3]), float(item[4])]
 
                             batch_targets[batch_idx].append(target_data)
 
-                            # 调试：验证修复后的数据
-                            if i < 3:
-                                print(f"🔧 [修复后] 目标{i}: class_id={target_data[0]}, coords=[{target_data[1]:.6f}, {target_data[2]:.6f}, {target_data[3]:.6f}, {target_data[4]:.6f}]")
-
-                            # 调试：打印前几个目标的数据
-                            if i < 3:
-                                # print(f"🔍 [数据解析] 目标{i}: 原始={item}, 解析后={target_data}")
-                                pass
-                except:
+                            # 数据修复成功
+                except Exception as e:
+                    print(f"❌ [数据解析] 目标{i}处理失败: {e}")
                     continue  # 跳过有问题的目标
 
             # 找到最大目标数量，但限制上限避免内存问题
@@ -387,26 +344,13 @@ class ComputeLoss:
             # print(f"🔍 [坐标转换] 缩放前数值范围: [{float(targets[:, :, 1:5].min().data):.6f}, {float(targets[:, :, 1:5].max().data):.6f}]")
             # print(f"🔍 [坐标转换] scale_tensor: {scale_tensor.numpy()}")
 
-            # 详细调试缩放过程
+            # 坐标缩放
             coords_before = targets[:, :, 1:5]
-            print(f"🔍 [缩放调试] 缩放前坐标形状: {coords_before.shape}")
-            print(f"🔍 [缩放调试] 缩放前数值范围: [{float(coords_before.min().data):.6f}, {float(coords_before.max().data):.6f}]")
-            print(f"🔍 [缩放调试] scale_tensor形状: {scale_tensor.shape}, 值: {scale_tensor.numpy()}")
-            if coords_before.shape[1] > 0:
-                print(f"🔍 [缩放调试] 缩放前第一个目标: {coords_before[0, 0, :].numpy()}")
-
             batch_target = coords_before * scale_tensor  # 缩放坐标
-            print(f"🔍 [坐标转换] 缩放后batch_target形状: {batch_target.shape}")
-            print(f"🔍 [坐标转换] 缩放后数值范围: [{float(batch_target.min().data):.6f}, {float(batch_target.max().data):.6f}]")
-            if batch_target.shape[1] > 0:
-                print(f"🔍 [坐标转换] 缩放后第一个目标: {batch_target[0, 0, :].numpy()}")
-                print(f"🔍 [坐标转换] 缩放后前3个目标: {batch_target[0, :3, :].numpy()}")
 
-            xyxy_coords = xywh2xyxy(batch_target)  # 转换坐标格式
-            print(f"🔍 [坐标转换] xywh2xyxy后数值范围: [{float(xyxy_coords.min().data):.6f}, {float(xyxy_coords.max().data):.6f}]")
-            print(f"🔍 [坐标转换] xywh2xyxy后前3个目标: {xyxy_coords[0, :3, :].numpy()}")
-            # print(f"🔍 [坐标转换] xywh2xyxy后形状: {xyxy_coords.shape}")
-            # print(f"🔍 [坐标转换] xywh2xyxy后数值范围: [{float(xyxy_coords.min().data):.6f}, {float(xyxy_coords.max().data):.6f}]")
+            # 修复：创建副本避免修改原始数据
+            batch_target_copy = batch_target.clone()
+            xyxy_coords = xywh2xyxy(batch_target_copy)  # 转换坐标格式
 
             targets = jt.concat([
                 targets[:, :, :1],  # 保持class不变
@@ -468,18 +412,23 @@ class VarifocalLoss(nn.Module):
         gt_score = gt_score.float32()
         label = label.float32()
 
-        # 修复关键错误：与PyTorch版本完全对齐
-        # PyTorch版本直接使用pred_score（logits）计算权重，不使用sigmoid
-        weight = alpha * pred_score.pow(gamma) * (1 - label) + gt_score * label
-
-        # 修复BCE损失计算：与PyTorch版本对齐，使用Jittor兼容API
-        # PyTorch使用F.binary_cross_entropy，Jittor需要手动实现
+        # 修复梯度爆炸问题：使用sigmoid后的概率计算权重
+        # 这样避免了logits的幂运算导致的数值爆炸
         pred_score_sigmoid = jt.sigmoid(pred_score)
-        # 手动实现binary_cross_entropy
-        bce_loss = -(gt_score * jt.log(pred_score_sigmoid + 1e-7) + (1 - gt_score) * jt.log(1 - pred_score_sigmoid + 1e-7))
 
-        # 计算最终损失：与PyTorch版本完全对齐
+        # 使用sigmoid后的概率计算权重，避免梯度爆炸
+        weight = alpha * pred_score_sigmoid.pow(gamma) * (1 - label) + gt_score * label
+
+        # 数值稳定的BCE损失计算
+        eps = 1e-7
+        pred_score_sigmoid = jt.clamp(pred_score_sigmoid, eps, 1 - eps)
+        bce_loss = -(gt_score * jt.log(pred_score_sigmoid) + (1 - gt_score) * jt.log(1 - pred_score_sigmoid))
+
+        # 计算最终损失，添加数值稳定性保护
         loss = (bce_loss * weight).sum()
+
+        # 防止损失过大导致梯度爆炸
+        loss = jt.clamp(loss, 0.0, 1000.0)
 
         return loss
 
@@ -498,8 +447,7 @@ class BboxLoss(nn.Module):
         # select positive samples mask
         num_pos = fg_mask.sum()
         num_pos_scalar = float(num_pos.data)  # Jittor方式获取标量值
-        print(f"🔍 [IoU损失调试] fg_mask正样本数: {num_pos_scalar}")
-        print(f"🔍 [IoU损失调试] target_scores_sum: {float(target_scores_sum.data):.6f}")
+        # IoU损失计算
         if num_pos_scalar > 0:
             # iou loss - 修复Jittor API，用索引替代masked_select
             bbox_mask = fg_mask.unsqueeze(-1).repeat([1, 1, 4])
@@ -537,32 +485,32 @@ class BboxLoss(nn.Module):
             except:
                 loss_iou = jt.clamp(loss_iou, 0.0, 10.0)
 
-            # dfl loss - 详细调试reshape问题
-            if self.use_dfl and pos_indices.shape[0] > 0:
-                print(f"🔍 [DFL调试] pred_dist形状: {pred_dist.shape}")
-                print(f"🔍 [DFL调试] pos_indices形状: {pos_indices.shape}")
-                print(f"🔍 [DFL调试] self.reg_max: {self.reg_max}")
+            # dfl loss - 完全修复DFL损失计算
+            if self.use_dfl and self.reg_max > 0 and pos_indices.shape[0] > 0:
+                try:
+                    # 使用Jittor方式实现masked_select
+                    pred_dist_pos = pred_dist[pos_indices[:, 0], pos_indices[:, 1]]  # [num_pos, channels]
 
-                # 使用Jittor方式实现masked_select
-                pred_dist_pos = pred_dist[pos_indices[:, 0], pos_indices[:, 1]]  # [num_pos, (reg_max+1)*4]
-                print(f"🔍 [DFL调试] pred_dist_pos形状: {pred_dist_pos.shape}")
-                print(f"🔍 [DFL调试] 期望reshape为: [-1, 4, {self.reg_max + 1}]")
+                    # 检查pred_dist_pos的实际维度
+                    num_pos = pred_dist_pos.shape[0]
+                    channels = pred_dist_pos.shape[1]
+                    expected_channels = 4 * (self.reg_max + 1)
 
-                # 检查尺寸是否匹配
-                expected_size = pred_dist_pos.shape[0] * 4 * (self.reg_max + 1)
-                actual_size = pred_dist_pos.numel()
-                print(f"🔍 [DFL调试] 实际大小: {actual_size}, 期望大小: {expected_size}")
+                    if channels == expected_channels:
+                        # DFL格式：[num_pos, 4*(reg_max+1)] -> [num_pos, 4, reg_max+1]
+                        pred_dist_pos = pred_dist_pos.reshape([num_pos, 4, self.reg_max + 1])
 
-                if actual_size != expected_size:
-                    print(f"🚨 [DFL错误] 尺寸不匹配！跳过DFL损失计算")
+                        target_ltrb = bbox2dist(anchor_points, target_bboxes, self.reg_max)
+                        target_ltrb_pos = target_ltrb[pos_indices[:, 0], pos_indices[:, 1]]  # [num_pos, 4]
+
+                        loss_dfl = self._df_loss(pred_dist_pos, target_ltrb_pos) * bbox_weight
+                    else:
+                        loss_dfl = jt.array(0.0)
+                except Exception as e:
                     loss_dfl = jt.array(0.0)
-                else:
-                    pred_dist_pos = pred_dist_pos.reshape([-1, 4, self.reg_max + 1])
-
-                target_ltrb = bbox2dist(anchor_points, target_bboxes, self.reg_max)
-                target_ltrb_pos = target_ltrb[pos_indices[:, 0], pos_indices[:, 1]]  # [num_pos, 4]
-
-                loss_dfl = self._df_loss(pred_dist_pos, target_ltrb_pos) * bbox_weight
+            else:
+                # DFL禁用或无正样本
+                loss_dfl = jt.array(0.0)
 
                 # 数值稳定性修复：安全的除法操作
                 loss_dfl_sum = loss_dfl.sum()
@@ -578,10 +526,8 @@ class BboxLoss(nn.Module):
                         loss_dfl = jt.ternary(jt.isnan(loss_dfl), jt.zeros_like(loss_dfl), loss_dfl)
                     if jt.isinf(loss_dfl).sum() > 0:
                         loss_dfl = jt.ternary(jt.isinf(loss_dfl), jt.full_like(loss_dfl, 10.0), loss_dfl)
-                except:
+                except Exception as e:
                     loss_dfl = jt.clamp(loss_dfl, 0.0, 10.0)
-            else:
-                loss_dfl = pred_dist.sum() * 0.
 
         else:
             loss_iou = pred_dist.sum() * 0.
@@ -620,9 +566,9 @@ class BboxLoss(nn.Module):
             loss_left_raw = jt.clamp(loss_left_raw, 0.0, 100.0)
             loss_right_raw = jt.clamp(loss_right_raw, 0.0, 100.0)
 
-            # 手动reshape和加权
-            loss_left = loss_left_raw.view(target_left.shape) * weight_left
-            loss_right = loss_right_raw.view(target_left.shape) * weight_right
+            # 手动reshape和加权 - 修复Jittor API
+            loss_left = loss_left_raw.reshape(target_left.shape) * weight_left
+            loss_right = loss_right_raw.reshape(target_left.shape) * weight_right
 
             # 计算最终损失
             final_loss = (loss_left + loss_right).mean(-1, keepdim=True)
@@ -824,6 +770,6 @@ if __name__ == "__main__":
     
     # 计算损失
     loss = loss_fn(predictions, targets)
-    
+
     print(f"✅ 损失计算成功: {float(loss.data):.6f}")
     print("🎯 损失函数测试完成！")

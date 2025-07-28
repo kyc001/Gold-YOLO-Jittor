@@ -44,7 +44,7 @@ def initialize_weights(model):
         elif t is nn.BatchNorm2d:
             m.eps = 1e-3
             m.momentum = 0.03
-        elif t in [nn.Hardswish, nn.LeakyReLU, nn.ReLU, nn.ReLU6, nn.SiLU]:
+        elif t in [nn.LeakyReLU, nn.ReLU, nn.ReLU6, nn.SiLU]:
             # Jittor的激活函数不需要设置inplace参数
             pass
 

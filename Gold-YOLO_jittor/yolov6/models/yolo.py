@@ -80,9 +80,14 @@ def build_network(config, channels, num_classes, num_layers, fuse_ab=False, dist
     channels_list = [make_divisible(i * width_mul, 8) for i in (channels_list_backbone + channels_list_neck)]
     
     # 获取backbone和neck的额外配置
-    block = get_block(config.model.backbone.type)
-    BACKBONE = eval(config.model.backbone.type)
-    NECK = eval(config.model.neck.type)
+    BACKBONE = get_block(config.model.backbone.type)
+    NECK = get_block(config.model.neck.type)
+    HEAD = get_block(config.model.head.type)
+
+    # 获取基础block类型（用于backbone和neck构造）
+    from yolov6.layers.common import RepVGGBlock
+    block = RepVGGBlock
+
     neck_extra_cfg = getattr(config.model.neck, 'extra_cfg', None)
     
     if 'CSP' in config.model.backbone.type:
@@ -151,6 +156,15 @@ def get_block(block_name):
     elif block_name == 'ConvWrapper':
         from yolov6.layers.common import ConvWrapper
         return ConvWrapper
+    elif block_name == 'EfficientRep':
+        from yolov6.models.efficientrep import EfficientRep
+        return EfficientRep
+    elif block_name == 'RepGDNeck':
+        from gold_yolo.reppan import RepGDNeck
+        return RepGDNeck
+    elif block_name == 'EffiDeHead':
+        from yolov6.models.effidehead import Detect
+        return Detect
     else:
         raise NotImplementedError(f"Block {block_name} not implemented")
 

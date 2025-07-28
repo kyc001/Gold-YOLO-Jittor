@@ -7,9 +7,26 @@ GOLD-YOLO Jittor版本 - 通用工具函数
 
 import os
 import glob
+import math
 import jittor as jt
 from pathlib import Path
 
+
+def check_img_size(img_size, s=32, floor=0):
+    """Verify image size is a multiple of stride s in each dimension"""
+    if isinstance(img_size, int):  # integer i.e. img_size=640
+        new_size = max(make_divisible(img_size, int(s)), floor)
+    else:  # list i.e. img_size=[640, 480]
+        new_size = [max(make_divisible(x, int(s)), floor) for x in img_size]
+    if new_size != img_size:
+        print(f'WARNING: --img-size {img_size} must be multiple of max stride {s}, updating to {new_size}')
+    return new_size
+
+def make_divisible(x, divisor):
+    """Returns nearest x divisible by divisor"""
+    if isinstance(divisor, jt.Var):
+        divisor = int(divisor.max())  # to int
+    return math.ceil(x / divisor) * divisor
 
 def increment_name(path):
     '''increase save directory's id'''

@@ -59,37 +59,22 @@ def select_candidates_in_gts(xy_centers, gt_bboxes, eps=1e-9):
     Return:
         (Tensor): shape(bs, n_max_boxes, num_total_anchors)
     """
-    # 调试：检查输入格式
-    print(f"🔍 [GT内检查] xy_centers形状: {xy_centers.shape}, 数值范围: [{float(xy_centers.min().data):.1f}, {float(xy_centers.max().data):.1f}]")
-    print(f"🔍 [GT内检查] gt_bboxes形状: {gt_bboxes.shape}, 数值范围: [{float(gt_bboxes.min().data):.1f}, {float(gt_bboxes.max().data):.1f}]")
+    # 检查输入格式
 
     # 检查坐标系统并修复不匹配问题
     if gt_bboxes.shape[1] > 0:
         first_gt = gt_bboxes[0, 0].numpy()
         width = first_gt[2] - first_gt[0]
         height = first_gt[3] - first_gt[1]
-        print(f"🔍 [GT内检查] 第一个GT框(原始): {first_gt}")
-        print(f"🔍 [GT内检查] 第一个GT框尺寸(原始): 宽={width:.6f}, 高={height:.6f}")
+        # 检查GT框格式
 
         # 检测坐标系统：如果GT框坐标都在[0,1]范围内，说明是归一化坐标
         max_coord = float(gt_bboxes.max().data)
         if max_coord <= 1.0:
-            print(f"🔧 [坐标修复] 检测到归一化坐标，转换为像素坐标")
             # 将GT框从归一化坐标转换为像素坐标
             gt_bboxes = gt_bboxes * 640.0
-            first_gt_fixed = gt_bboxes[0, 0].numpy()
-            width_fixed = first_gt_fixed[2] - first_gt_fixed[0]
-            height_fixed = first_gt_fixed[3] - first_gt_fixed[1]
-            print(f"🔧 [坐标修复] 第一个GT框(修复后): {first_gt_fixed}")
-            print(f"🔧 [坐标修复] 第一个GT框尺寸(修复后): 宽={width_fixed:.1f}, 高={height_fixed:.1f}")
 
-        print(f"🔍 [GT内检查] 前3个anchor点: {xy_centers[:3, 0].numpy()}")
-
-        # 重新统计目标尺寸(使用像素坐标)
-        all_widths = gt_bboxes[0, :, 2] - gt_bboxes[0, :, 0]
-        all_heights = gt_bboxes[0, :, 3] - gt_bboxes[0, :, 1]
-        small_targets = ((all_widths < 1.0) | (all_heights < 1.0)).sum()
-        print(f"🔍 [GT内检查] 极小目标数量(宽或高<1像素): {int(small_targets.data)}/{gt_bboxes.shape[1]}")
+        # 坐标转换完成
 
     n_anchors = xy_centers.size(0)
     bs, n_max_boxes, _ = gt_bboxes.size()
@@ -102,14 +87,9 @@ def select_candidates_in_gts(xy_centers, gt_bboxes, eps=1e-9):
     bbox_deltas = jt.concat([b_lt, b_rb], dim=-1)
     bbox_deltas = bbox_deltas.reshape([bs, n_max_boxes, n_anchors, -1])
 
-    # 调试：检查bbox_deltas
+    # 计算在GT内的anchor
     min_deltas = bbox_deltas.min(dim=-1)[0]
-    print(f"🔍 [GT内检查] bbox_deltas最小值范围: [{float(min_deltas.min().data):.6f}, {float(min_deltas.max().data):.6f}]")
-    print(f"🔍 [GT内检查] eps阈值: {eps}")
-
     result = (min_deltas > eps).astype(gt_bboxes.dtype)
-    print(f"🔍 [GT内检查] 结果: 在GT内的anchor数量: {int(result.sum().data)}")
-
     return result
 
 

@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument('--lr-final', type=float, default=0.01, help='最终学习率 (严格对齐PyTorch: lrf=0.01)')
     parser.add_argument('--momentum', type=float, default=0.937, help='动量 (对齐PyTorch)')
     parser.add_argument('--weight-decay', type=float, default=0.0005, help='权重衰减 (对齐PyTorch)')
-    parser.add_argument('--data', type=str, default='Gold-YOLO_jittor/data/voc_subset_improved.yaml', help='数据配置文件')
+    parser.add_argument('--data', type=str, default='../data/voc2012_subset/voc20.yaml', help='数据配置文件')
     parser.add_argument('--project', type=str, default='runs/train', help='项目保存目录')
     parser.add_argument('--name', type=str, default='pytorch_aligned_stable', help='实验名称')
     
@@ -90,7 +90,10 @@ def safe_loss_computation_with_protection(loss_fn, outputs, targets, epoch, step
         return total_loss
         
     except Exception as e:
-        print(f"⚠️ 损失计算异常: {e}")
+        print(f"❌ 损失计算异常: {e}")
+        print(f"❌ 异常类型: {type(e).__name__}")
+        import traceback
+        print(f"❌ 详细堆栈: {traceback.format_exc()}")
         return None
 
 
@@ -285,21 +288,40 @@ def train_one_epoch_stable(model, dataset, loss_fn, optimizer, epoch, args, lr_l
     return avg_loss
 
 
+def find_dataset_config():
+    """自动查找数据集配置文件"""
+    possible_paths = [
+        '../data/voc2012_subset/voc20.yaml',
+        '/home/kyc/project/GOLD-YOLO/data/voc2012_subset/voc20.yaml',
+        'data/voc2012_subset/voc20.yaml',
+        './data/voc2012_subset/voc20.yaml'
+    ]
+
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+
+    raise FileNotFoundError(f"数据集配置文件未找到，尝试过的路径: {possible_paths}")
+
 def main():
-    """主训练函数"""
+    """主训练函数 - GOLD-YOLO-n点击即用"""
     args = parse_args()
-    
-    print("🚀 GOLD-YOLO Jittor版本 - PyTorch对齐 + 超级稳定")
+
+    print("🚀 GOLD-YOLO-n Jittor版本 - 点击即用稳定训练")
     print("=" * 70)
-    print("🎯 训练参数 (严格对齐PyTorch + 数值稳定保护):")
-    print(f"   批次大小: {args.batch_size}")
-    print(f"   训练轮数: {args.epochs}")
-    print(f"   初始学习率: {args.lr_initial}")
-    print(f"   最终学习率: {args.lr_final}")
-    print(f"   动量: {args.momentum}")
-    print(f"   权重衰减: {args.weight_decay}")
+
+    # 自动查找数据集
+    if not os.path.exists(args.data):
+        try:
+            args.data = find_dataset_config()
+            print(f"📊 自动找到数据集: {args.data}")
+        except FileNotFoundError as e:
+            print(f"❌ {e}")
+            return
+
+    print(f"🎯 模型: GOLD-YOLO-n | 数据集: {os.path.basename(args.data)} | 轮数: {args.epochs} | 批次: {args.batch_size}")
     print("=" * 70)
-    
+
     try:
         # 加载数据配置
         with open(args.data, 'r') as f:
@@ -331,7 +353,7 @@ def main():
             data_dict=data_config
         )
         
-        print(f"✅ 训练数据集: {len(train_dataset)} 样本")
+        print(f"📦 数据集: {len(train_dataset)} 样本")
         
         # 创建模型和损失函数
         from models.perfect_gold_yolo import create_perfect_gold_yolo_model
@@ -402,7 +424,7 @@ def main():
                     print(f"⚠️ 保存失败: {e}")
             
             # 定期保存检查点
-            if (epoch + 1) % 25 == 0:
+            if (epoch + 1) % 10 == 0:
                 checkpoint_path = str(save_dir / f"epoch_{epoch+1}.pkl")
                 try:
                     jt.save({
@@ -429,7 +451,6 @@ def main():
             pass
         
         print(f"🎉 训练完成！最佳损失: {best_loss:.6f}")
-        print(f"✅ 严格对齐PyTorch参数 + 超级数值稳定保护")
         
     except Exception as e:
         print(f"❌ 训练失败: {e}")

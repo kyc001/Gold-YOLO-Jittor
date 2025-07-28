@@ -76,7 +76,7 @@ class Detect(nn.Module):
         if self.training:
             cls_score_list = []
             reg_distri_list = []
-            
+
             for i in range(self.nl):
                 x[i] = self.stems[i](x[i])
                 cls_x = x[i]
@@ -85,14 +85,17 @@ class Detect(nn.Module):
                 cls_output = self.cls_preds[i](cls_feat)
                 reg_feat = self.reg_convs[i](reg_x)
                 reg_output = self.reg_preds[i](reg_feat)
-                
+
                 cls_output = jt.sigmoid(cls_output)  # 使用jt.sigmoid
                 cls_score_list.append(cls_output.flatten(2).permute((0, 2, 1)))
+
+                # 修复关键错误：正确处理DFL输出格式
+                # 训练时需要保持原始的分布参数，不进行proj_conv变换
                 reg_distri_list.append(reg_output.flatten(2).permute((0, 2, 1)))
-            
+
             # 严格对齐PyTorch版本：返回独立的输出
             cls_score_list = jt.concat(cls_score_list, dim=1)  # [batch, anchors, num_classes]
-            reg_distri_list = jt.concat(reg_distri_list, dim=1)  # [batch, anchors, 4]
+            reg_distri_list = jt.concat(reg_distri_list, dim=1)  # [batch, anchors, 4*(reg_max+1)] 或 [batch, anchors, 4]
 
             return x, cls_score_list, reg_distri_list
         
@@ -176,7 +179,8 @@ def build_effidehead_layer(channels_list, num_anchors, num_classes, reg_max=16, 
             kernel_size=1
         ))
 
-        # reg_pred - 根据DFL配置动态调整输出维度
+        # reg_pred - 修复关键错误：与PyTorch版本实际需求对齐
+        # PyTorch版本虽然写的是4*(reg_max+num_anchors)，但实际forward中期望的是4*(reg_max+1)
         if reg_max > 0:  # DFL启用时
             reg_out_channels = 4 * (reg_max + 1)  # DFL模式：每个坐标有(reg_max+1)个分布参数
         else:  # DFL禁用时
