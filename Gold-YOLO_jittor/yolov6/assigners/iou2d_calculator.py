@@ -50,8 +50,15 @@ def cast_tensor_type(x, scale=1., dtype=None):
 
 
 def fp16_clamp(x, min=None, max=None):
-    # Jittor中简化实现，直接使用clamp
-    return x.clamp(min, max)
+    # Jittor兼容的clamp实现
+    if min is not None and max is not None:
+        return jt.clamp(x, min, max)
+    elif min is not None:
+        return jt.maximum(x, min)
+    elif max is not None:
+        return jt.minimum(x, max)
+    else:
+        return x
 
 
 def iou2d_calculator(bboxes1, bboxes2, mode='iou', is_aligned=False, scale=1., dtype=None):

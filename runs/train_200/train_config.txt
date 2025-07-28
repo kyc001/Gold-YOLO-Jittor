@@ -1,0 +1,15 @@
+GOLD-YOLO Jittor 200轮训练配置
+========================================
+data: ../data/voc2012_subset/voc20.yaml
+epochs: 200
+batch_size: 8
+img_size: 640
+lr_initial: 0.01
+lr_final: 0.01
+warmup_epochs: 3
+momentum: 0.937
+weight_decay: 0.0005
+save_dir: ./runs/train_200
+save_interval: 50
+device: cuda
+开始时间: 2025-07-28 15:21:39

@@ -168,13 +168,13 @@ def build_network(config, channels=3, num_classes=80, num_layers=3, fuse_ab=Fals
         num_layers=num_layers
     )
     
-    # 创建Head
+    # 创建Head - 修复关键错误：与PyTorch版本对齐，不传递reg_max参数，使用默认值16
     head = Detect(
         num_classes=num_classes,
         num_layers=num_layers,
         head_layers=head_layers,
-        use_dfl=use_dfl,
-        reg_max=reg_max
+        use_dfl=use_dfl
+        # 注意：不传递reg_max参数，使用默认值16，与PyTorch版本保持一致
     )
     
     print(f"✅ 网络构建完成!")
@@ -250,60 +250,40 @@ class PerfectGoldYOLO(nn.Module):
         # Head检测 - 始终返回统一格式
         outputs = self.detect(neck_features)
 
-        # 确保输出格式一致：始终返回单个tensor [batch, anchors, channels]
-        if isinstance(outputs, (list, tuple)):
-            # 如果是多个输出，检查是否已经是YOLO格式
-            if len(outputs) >= 2:
-                # 检查第一个输出的通道数
-                first_output = outputs[0]
-                if len(first_output.shape) == 3 and first_output.shape[-1] == 25:  # 4+1+20=25
-                    # 已经是YOLO格式 [4坐标+1置信度+num_classes类别]
-                    outputs = first_output
-                else:
+        # 处理Head输出格式
+        if self.training:
+            # 训练模式：直接返回三元组给损失函数
+            if isinstance(outputs, (list, tuple)) and len(outputs) == 3:
+                # 新格式：(feats, cls_scores, reg_distri)
+                return outputs
+            else:
+                raise ValueError(f"训练模式期望三元组输出，得到: {type(outputs)}")
+        else:
+            # 推理模式：转换为YOLO格式
+            if isinstance(outputs, (list, tuple)):
+                if len(outputs) == 3:
+                    # 新格式：(feats, cls_scores, reg_distri) -> 已经在Head中处理为YOLO格式
+                    outputs = outputs  # 推理时Head应该返回单个tensor
+                elif len(outputs) >= 2:
                     # 旧格式[pred_scores, pred_boxes]，需要转换
                     pred_scores = outputs[0]  # [batch, anchors, num_classes]
                     pred_boxes = outputs[1]   # [batch, anchors, 4]
 
                     # 合并为旧格式（为了兼容性）
                     outputs = jt.concat([pred_scores, pred_boxes], dim=-1)  # [batch, anchors, num_classes+4]
-            else:
-                outputs = outputs[0]
-
-        # 验证输出格式
-        if len(outputs.shape) != 3:
-            raise ValueError(f"模型输出格式错误！期望3维tensor，得到{outputs.shape}")
-
-        batch_size, num_anchors, total_channels = outputs.shape
-        
-        # 根据模型配置计算期望通道数
-        head_cfg = self.config.model['head'] if hasattr(self.config, 'model') else self.config['model']['head']
-        use_dfl = head_cfg.get('use_dfl', False)  # 默认为False
-        reg_max = head_cfg.get('reg_max', 0)     # 默认为0
-        
-        if use_dfl and reg_max > 0:
-            reg_channels = 4 * (reg_max + 1)  # DFL回归通道数
-        else:
-            reg_channels = 4  # 标准回归通道数
-            
-        # 修复：期望YOLO格式 [4坐标 + 1置信度 + num_classes类别]
-        expected_channels = 4 + 1 + 20  # YOLO格式：坐标 + 置信度 + 类别
-
-        if total_channels != expected_channels:
-            print(f"⚠️ 输出通道数不匹配：期望{expected_channels}（YOLO格式:4+1+20），得到{total_channels}")
-            # 如果是25通道，说明已经是正确的YOLO格式，不需要调整
-            if total_channels == 25:
-                print(f"✅ 检测到YOLO格式，保持25通道")
-                pass  # 不做任何调整
-            else:
-                # 其他情况才需要调整
-                if total_channels > expected_channels:
-                    outputs = outputs[:, :, :expected_channels]
                 else:
-                    # 补齐通道
-                    padding = jt.zeros((batch_size, num_anchors, expected_channels - total_channels))
-                    outputs = jt.concat([outputs, padding], dim=-1)
+                    outputs = outputs[0]
 
-        return outputs
+            # 推理模式的验证（仅在推理时执行）
+            if isinstance(outputs, jt.Var) and len(outputs.shape) == 3:
+                # 验证输出格式
+                batch_size, num_anchors, total_channels = outputs.shape
+                expected_channels = 4 + 1 + 20  # YOLO格式：坐标 + 置信度 + 类别
+
+                if total_channels != expected_channels:
+                    print(f"⚠️ 推理输出通道数不匹配: 期望{expected_channels}, 实际{total_channels}")
+
+            return outputs
 
 
 def create_perfect_gold_yolo_model(config_name='gold_yolo-n', num_classes=20):

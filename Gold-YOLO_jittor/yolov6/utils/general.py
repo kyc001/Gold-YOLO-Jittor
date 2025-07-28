@@ -56,10 +56,12 @@ def bbox2dist(anchor_points, bbox, reg_max):
 
 def xywh2xyxy(bboxes):
     '''Transform bbox(xywh) to box(xyxy).'''
-    bboxes[..., 0] = bboxes[..., 0] - bboxes[..., 2] * 0.5
-    bboxes[..., 1] = bboxes[..., 1] - bboxes[..., 3] * 0.5
-    bboxes[..., 2] = bboxes[..., 0] + bboxes[..., 2]
-    bboxes[..., 3] = bboxes[..., 1] + bboxes[..., 3]
+    # 修复坐标转换bug - 保存原始中心坐标和尺寸
+    cx, cy, w, h = bboxes[..., 0], bboxes[..., 1], bboxes[..., 2], bboxes[..., 3]
+    bboxes[..., 0] = cx - w * 0.5  # x1 = cx - w/2
+    bboxes[..., 1] = cy - h * 0.5  # y1 = cy - h/2
+    bboxes[..., 2] = cx + w * 0.5  # x2 = cx + w/2
+    bboxes[..., 3] = cy + h * 0.5  # y2 = cy + h/2
     return bboxes
 
 

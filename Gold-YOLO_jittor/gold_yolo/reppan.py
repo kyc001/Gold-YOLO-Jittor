@@ -84,7 +84,7 @@ class RepGDNeck(nn.Module):
         )
         
         self.high_FAM = PyramidPoolAgg(stride=extra_cfg.c2t_stride, pool_mode=extra_cfg.pool_mode)
-        dpr = [x.item() for x in jt.linspace(0, extra_cfg.drop_path_rate, extra_cfg.depths)]  # 使用jt.linspace
+        dpr = [float(x.data) for x in jt.linspace(0, extra_cfg.drop_path_rate, extra_cfg.depths)]  # 修复Jittor .item()问题
         # PyramidPoolAgg的输出通道数是p3+p4+c5的通道数之和
         pyramid_out_channels = channels_list[6] + channels_list[5] + channels_list[4]  # p3+p4+c5
 
@@ -206,11 +206,16 @@ class GDNeck(nn.Module):
                 stride=1
         )
         self.LAF_p4 = SimFusion_3in(
-                in_channel_list=[channels_list[3], channels_list[3]],  # 512, 256
+                in_channel_list=[channels_list[2], channels_list[3], channels_list[5]],  # c3, c4, c5_half的通道数
                 out_channels=channels_list[5],  # 256
         )
-        self.Inject_p4 = inj_block(channels_list[5], channels_list[5], norm_cfg=extra_cfg.norm_cfg,
-                                   activations=nn.ReLU6)
+        self.Inject_p4 = inj_block(
+            inp=channels_list[5],
+            oup=channels_list[5],
+            norm_cfg=extra_cfg.norm_cfg,
+            activations=nn.ReLU6,
+            global_inp=extra_cfg.trans_channels[0]  # low_global_info[0]的通道数
+        )
         self.Rep_p4 = BepC3(
                 in_channels=channels_list[5],  # 256
                 out_channels=channels_list[5],  # 256
@@ -226,11 +231,16 @@ class GDNeck(nn.Module):
                 stride=1
         )
         self.LAF_p3 = SimFusion_3in(
-                in_channel_list=[channels_list[5], channels_list[5]],  # 512, 256
+                in_channel_list=[channels_list[1], channels_list[2], channels_list[6]],  # c2, c3, p4_half的通道数
                 out_channels=channels_list[6],  # 256
         )
-        self.Inject_p3 = inj_block(channels_list[6], channels_list[6], norm_cfg=extra_cfg.norm_cfg,
-                                   activations=nn.ReLU6)
+        self.Inject_p3 = inj_block(
+            inp=channels_list[6],
+            oup=channels_list[6],
+            norm_cfg=extra_cfg.norm_cfg,
+            activations=nn.ReLU6,
+            global_inp=extra_cfg.trans_channels[1]  # low_global_info[1]的通道数
+        )
         self.Rep_p3 = BepC3(
                 in_channels=channels_list[6],  # 128
                 out_channels=channels_list[6],  # 128
@@ -240,7 +250,7 @@ class GDNeck(nn.Module):
         )
 
         self.high_FAM = PyramidPoolAgg(stride=extra_cfg.c2t_stride, pool_mode=extra_cfg.pool_mode)
-        dpr = [x.item() for x in jt.linspace(0, extra_cfg.drop_path_rate, extra_cfg.depths)]
+        dpr = [float(x.data) for x in jt.linspace(0, extra_cfg.drop_path_rate, extra_cfg.depths)]  # 修复Jittor .item()问题
         self.high_IFM = TopBasicLayer(
                 block_num=extra_cfg.depths,
                 embedding_dim=extra_cfg.embed_dim_n,

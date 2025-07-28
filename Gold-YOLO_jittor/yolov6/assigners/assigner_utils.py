@@ -167,7 +167,7 @@ def bbox_overlaps(bboxes1, bboxes2, mode='iou', is_aligned=False, eps=1e-6):
         lt = jt.maximum(bboxes1[..., :2], bboxes2[..., :2])  # [B, rows, 2]
         rb = jt.minimum(bboxes1[..., 2:], bboxes2[..., 2:])  # [B, rows, 2]
 
-        wh = (rb - lt).clamp(min=0)  # [B, rows, 2]
+        wh = jt.maximum(rb - lt, 0)  # [B, rows, 2]
         overlap = wh[..., 0] * wh[..., 1]
 
         if mode in ['iou', 'giou']:
@@ -183,7 +183,7 @@ def bbox_overlaps(bboxes1, bboxes2, mode='iou', is_aligned=False, eps=1e-6):
         rb = jt.minimum(bboxes1[..., :, None, 2:],
                        bboxes2[..., None, :, 2:])  # [B, rows, cols, 2]
 
-        wh = (rb - lt).clamp(min=0)  # [B, rows, cols, 2]
+        wh = jt.maximum(rb - lt, 0)  # [B, rows, cols, 2]
         overlap = wh[..., 0] * wh[..., 1]
 
         if mode in ['iou', 'giou']:
@@ -202,7 +202,7 @@ def bbox_overlaps(bboxes1, bboxes2, mode='iou', is_aligned=False, eps=1e-6):
     if mode in ['iou', 'iof']:
         return ious
     # calculate gious
-    enclose_wh = (enclosed_rb - enclosed_lt).clamp(min=0)
+    enclose_wh = jt.maximum(enclosed_rb - enclosed_lt, 0)
     enclose_area = enclose_wh[..., 0] * enclose_wh[..., 1]
     enclose_area = jt.maximum(enclose_area, eps)
     gious = ious - (enclose_area - union) / enclose_area

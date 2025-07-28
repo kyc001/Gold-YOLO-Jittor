@@ -21,10 +21,12 @@ os.environ['NUMEXPR_MAX_THREADS'] = str(min(os.cpu_count(), 8))  # NumExpr max t
 def xywh2xyxy(x):
     '''Convert boxes with shape [n, 4] from [x, y, w, h] to [x1, y1, x2, y2] where x1y1 is top-left, x2y2=bottom-right.'''
     y = x.clone() if isinstance(x, jt.Var) else np.copy(x)
-    y[:, 0] = x[:, 0] - x[:, 2] / 2  # top left x
-    y[:, 1] = x[:, 1] - x[:, 3] / 2  # top left y
-    y[:, 2] = x[:, 0] + x[:, 2] / 2  # bottom right x
-    y[:, 3] = x[:, 1] + x[:, 3] / 2  # bottom right y
+    # 修复坐标转换 - 使用原始坐标计算，避免覆盖问题
+    cx, cy, w, h = x[:, 0], x[:, 1], x[:, 2], x[:, 3]
+    y[:, 0] = cx - w / 2  # top left x
+    y[:, 1] = cy - h / 2  # top left y
+    y[:, 2] = cx + w / 2  # bottom right x
+    y[:, 3] = cy + h / 2  # bottom right y
     return y
 
 

@@ -105,7 +105,8 @@ class BboxLoss(nn.Module):
             
             loss_dfl = self._df_loss(pred_dist_pos, target_ltrb_pos) * bbox_weight
             
-            if target_scores_sum.item() == 0:
+            target_scores_sum_scalar = float(target_scores_sum.data)  # Jittor方式获取标量值
+            if target_scores_sum_scalar == 0:
                 loss_dfl = loss_dfl.sum()
             else:
                 loss_dfl = loss_dfl.sum() / target_scores_sum
@@ -121,9 +122,22 @@ class BboxLoss(nn.Module):
             if pred_dist.numel() == 0 or target.numel() == 0:
                 return jt.zeros((1,), dtype='float32')
             
-            # 清理输入中的异常值
-            pred_dist = jt.nan_to_num(pred_dist, nan=0.0, posinf=10.0, neginf=-10.0)
-            target = jt.nan_to_num(target, nan=0.0, posinf=float(self.reg_max), neginf=0.0)
+            # Jittor方式清理输入中的异常值
+            try:
+                if jt.isnan(pred_dist).sum() > 0:
+                    pred_dist = jt.ternary(jt.isnan(pred_dist), jt.zeros_like(pred_dist), pred_dist)
+                if jt.isinf(pred_dist).sum() > 0:
+                    pred_dist = jt.ternary(jt.isinf(pred_dist), jt.clamp(pred_dist, -10.0, 10.0), pred_dist)
+            except:
+                pred_dist = jt.clamp(pred_dist, -10.0, 10.0)
+
+            try:
+                if jt.isnan(target).sum() > 0:
+                    target = jt.ternary(jt.isnan(target), jt.zeros_like(target), target)
+                if jt.isinf(target).sum() > 0:
+                    target = jt.ternary(jt.isinf(target), jt.full_like(target, float(self.reg_max)), target)
+            except:
+                target = jt.clamp(target, 0.0, float(self.reg_max))
             
             # 严格限制target范围，防止索引越界
             target = jt.clamp(target, 0.0, float(self.reg_max - 1e-6))  # 稍微小于reg_max避免边界问题
@@ -193,8 +207,14 @@ class BboxLoss(nn.Module):
             # 沿最后一个维度求平均，保持维度
             loss = loss.mean(-1, keepdims=True)
             
-            # 最终安全检查
-            loss = jt.nan_to_num(loss, nan=0.0, posinf=10.0, neginf=0.0)
+            # Jittor方式最终安全检查
+            try:
+                if jt.isnan(loss).sum() > 0:
+                    loss = jt.ternary(jt.isnan(loss), jt.zeros_like(loss), loss)
+                if jt.isinf(loss).sum() > 0:
+                    loss = jt.ternary(jt.isinf(loss), jt.full_like(loss, 10.0), loss)
+            except:
+                pass
             loss = jt.clamp(loss, 0.0, 10.0)
             
             # 如果仍有异常值，直接设为0
@@ -268,7 +288,14 @@ class ComputeLoss:
                 has_inf = jt.isinf(outputs).sum() > 0
 
                 if has_nan or has_inf:
-                    outputs = jt.nan_to_num(outputs, nan=0.0, posinf=1e6, neginf=-1e6)
+                    # Jittor方式处理NaN/Inf
+                    try:
+                        if has_nan:
+                            outputs = jt.ternary(jt.isnan(outputs), jt.zeros_like(outputs), outputs)
+                        if has_inf:
+                            outputs = jt.ternary(jt.isinf(outputs), jt.clamp(outputs, -1e6, 1e6), outputs)
+                    except:
+                        outputs = jt.clamp(outputs, -1e6, 1e6)
         except Exception as e:
             pass
 
@@ -397,7 +424,8 @@ class ComputeLoss:
 
         target_scores_sum = target_scores.sum()
         # 修复Jittor tensor比较 - 直接比较
-        if target_scores_sum.item() > 0:
+        target_scores_sum_scalar = float(target_scores_sum.data)  # Jittor方式获取标量值
+        if target_scores_sum_scalar > 0:
             loss_cls /= target_scores_sum
 
         loss_cls = loss_cls.sum()

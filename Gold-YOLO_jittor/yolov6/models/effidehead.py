@@ -31,9 +31,8 @@ class Detect(nn.Module):
         self.stride = jt.array(stride)  # 使用jt.array替代torch.tensor
         self.use_dfl = use_dfl
         self.reg_max = reg_max
-        # 只在use_dfl=True时创建proj_conv，避免无用参数
-        if self.use_dfl:
-            self.proj_conv = nn.Conv2d(self.reg_max + 1, 1, 1, bias=False)
+        # 修复关键错误：与PyTorch版本对齐，总是创建proj_conv层
+        self.proj_conv = nn.Conv2d(self.reg_max + 1, 1, 1, bias=False)
         self.grid_cell_offset = 0.5
         self.grid_cell_size = 5.0
         
@@ -54,19 +53,23 @@ class Detect(nn.Module):
             self.reg_preds.append(head_layers[idx + 4])
     
     def initialize_biases(self):
-        """初始化偏置"""
+        """初始化偏置 - 与PyTorch版本完全对齐"""
         for conv in self.cls_preds:
-            # Jittor使用不同的初始化方式
+            # 与PyTorch版本对齐的初始化
             bias_value = -math.log((1 - self.prior_prob) / self.prior_prob)
             conv.bias.data = jt.full_like(conv.bias.data, bias_value)
+            conv.weight.data = jt.zeros_like(conv.weight.data)
 
         for conv in self.reg_preds:
-            # Jittor使用不同的初始化方式
+            # 与PyTorch版本对齐的初始化
             conv.bias.data = jt.ones_like(conv.bias.data)
-        
-        if self.use_dfl and hasattr(self, 'proj_conv'):
-            # 使用更好的初始化，避免梯度消失
-            nn.init.xavier_uniform_(self.proj_conv.weight)
+            conv.weight.data = jt.zeros_like(conv.weight.data)
+
+        # 修复关键错误：与PyTorch版本对齐，总是初始化proj_conv
+        self.proj = jt.linspace(0, self.reg_max, self.reg_max + 1)
+        # Jittor的权重赋值方式
+        proj_weight = self.proj.view([1, self.reg_max + 1, 1, 1]).clone().detach()
+        self.proj_conv.weight = jt.array(proj_weight.numpy(), dtype=self.proj_conv.weight.dtype)
     
     def execute(self, x):
         """Jittor版本的前向传播"""
@@ -87,24 +90,11 @@ class Detect(nn.Module):
                 cls_score_list.append(cls_output.flatten(2).permute((0, 2, 1)))
                 reg_distri_list.append(reg_output.flatten(2).permute((0, 2, 1)))
             
-            # 合并为标准YOLO格式：[x, y, w, h, objectness, class1, class2, ...]
-            cls_scores = jt.concat(cls_score_list, dim=1)  # [batch, anchors, num_classes]
-            reg_distri = jt.concat(reg_distri_list, dim=1)  # [batch, anchors, 4]
+            # 严格对齐PyTorch版本：返回独立的输出
+            cls_score_list = jt.concat(cls_score_list, dim=1)  # [batch, anchors, num_classes]
+            reg_distri_list = jt.concat(reg_distri_list, dim=1)  # [batch, anchors, 4]
 
-            # 添加objectness置信度（使用类别概率的最大值作为objectness）
-            # 在Jittor中，max可能返回不同格式，使用更安全的方法
-            objectness = jt.max(cls_scores, dim=-1)  # 可能返回tuple或tensor
-            if isinstance(objectness, tuple):
-                objectness = objectness[0]  # 取值，忽略索引
-
-            # 确保objectness是3维的
-            if len(objectness.shape) == 2:
-                objectness = objectness.unsqueeze(-1)  # [batch, anchors, 1]
-
-            # 合并为YOLO格式：[坐标(4) + 置信度(1) + 类别(num_classes)]
-            yolo_output = jt.concat([reg_distri, objectness, cls_scores], dim=-1)
-
-            return yolo_output
+            return x, cls_score_list, reg_distri_list
         
         else:
             cls_score_list = []
@@ -123,7 +113,8 @@ class Detect(nn.Module):
                 reg_feat = self.reg_convs[i](reg_x)
                 reg_output = self.reg_preds[i](reg_feat)
                 
-                if self.use_dfl and hasattr(self, 'proj_conv'):
+                # 修复关键错误：与PyTorch版本对齐，总是使用proj_conv（当use_dfl=True时）
+                if self.use_dfl:
                     reg_output = reg_output.reshape([-1, 4, self.reg_max + 1, l]).permute(0, 2, 1, 3)
                     reg_output = self.proj_conv(nn.softmax(reg_output, dim=1))
                 
@@ -134,20 +125,15 @@ class Detect(nn.Module):
             cls_score_list = jt.concat(cls_score_list, dim=-1).permute(0, 2, 1)
             reg_dist_list = jt.concat(reg_dist_list, dim=-1).permute(0, 2, 1)
 
-            pred_bboxes = dist2bbox(reg_dist_list, anchor_points, box_format='xyxy')
+            pred_bboxes = dist2bbox(reg_dist_list, anchor_points, box_format='xywh')
             pred_bboxes *= stride_tensor
 
-            # 修复：返回YOLO格式 [坐标(4) + 置信度(1) + 类别(num_classes)]
-            # 添加objectness置信度
-            objectness = jt.max(cls_score_list, dim=-1)
-            if isinstance(objectness, tuple):
-                objectness = objectness[0]
-            if len(objectness.shape) == 2:
-                objectness = objectness.unsqueeze(-1)
-
-            # 合并为YOLO格式：[坐标(4) + 置信度(1) + 类别(num_classes)]
-            yolo_output = jt.concat([pred_bboxes, objectness, cls_score_list], dim=-1)
-            return yolo_output
+            # 严格对齐PyTorch版本的输出格式
+            return jt.concat([
+                pred_bboxes,
+                jt.ones((b, pred_bboxes.shape[1], 1), dtype=pred_bboxes.dtype),  # objectness
+                cls_score_list
+            ], dim=-1)
 
 
 def build_effidehead_layer(channels_list, num_anchors, num_classes, reg_max=16, num_layers=3):
