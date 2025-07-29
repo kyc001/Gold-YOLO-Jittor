@@ -150,17 +150,10 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
         if multi_label:
             box_idx, class_idx = (x[:, 5:] > conf_thres).nonzero().T
             x = jt.concat((box[box_idx], x[box_idx, class_idx + 5, None], class_idx[:, None].float()), 1)
-        else:  # Only keep the class with highest scores.
-            max_result = x[:, 5:].max(1, keepdim=True)
-            if isinstance(max_result, tuple):
-                conf, class_idx = max_result
-            else:
-                conf = max_result
-                argmax_result = x[:, 5:].argmax(1)
-                if isinstance(argmax_result, tuple):
-                    class_idx = argmax_result[1].unsqueeze(1)  # 取索引部分
-                else:
-                    class_idx = argmax_result.unsqueeze(1)
+        else:  # Only keep the class with highest scores. - 完全照抄PyTorch版本
+            # 完全照抄PyTorch版本的第79行
+            conf = x[:, 5:].max(1, keepdim=True)  # 获取最大置信度
+            class_idx = x[:, 5:].argmax(1, keepdim=True)  # 获取最大置信度对应的类别索引
             x = jt.concat((box, conf, class_idx.float()), 1)[conf.view(-1) > conf_thres]
 
         # Filter by class, only keep boxes whose category is in classes.

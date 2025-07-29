@@ -168,13 +168,13 @@ def build_network(config, channels=3, num_classes=80, num_layers=3, fuse_ab=Fals
         num_layers=num_layers
     )
     
-    # 创建Head - 修复关键错误：与PyTorch版本对齐，不传递reg_max参数，使用默认值16
+    # 创建Head - 修复关键错误：与PyTorch版本对齐，正确传递所有配置参数
     head = Detect(
         num_classes=num_classes,
         num_layers=num_layers,
         head_layers=head_layers,
-        use_dfl=use_dfl
-        # 注意：不传递reg_max参数，使用默认值16，与PyTorch版本保持一致
+        use_dfl=use_dfl,
+        reg_max=reg_max  # 关键修复：正确传递reg_max参数
     )
     
     print(f"✅ 网络构建完成!")

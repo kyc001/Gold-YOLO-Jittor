@@ -52,33 +52,25 @@ def dist_calculator(gt_bboxes, anchor_bboxes):
 
 def select_candidates_in_gts(xy_centers, gt_bboxes, eps=1e-9):
     """select the positive anchors's center in gt
+    严格对齐PyTorch版本的实现
 
     Args:
-        xy_centers (Tensor): shape(bs*n_max_boxes, num_total_anchors, 4) - anchor中心点坐标(像素坐标)
-        gt_bboxes (Tensor): shape(bs, n_max_boxes, 4) - GT框坐标(可能是归一化坐标)
+        xy_centers (Tensor): shape(num_total_anchors, 2) - anchor中心点坐标
+        gt_bboxes (Tensor): shape(bs, n_max_boxes, 4) - GT框坐标(中心点格式)
     Return:
         (Tensor): shape(bs, n_max_boxes, num_total_anchors)
     """
-    # 检查输入格式
-
-    # 检查坐标系统并修复不匹配问题
-    if gt_bboxes.shape[1] > 0:
-        first_gt = gt_bboxes[0, 0].numpy()
-        width = first_gt[2] - first_gt[0]
-        height = first_gt[3] - first_gt[1]
-        # 检查GT框格式
-
-        # 检测坐标系统：如果GT框坐标都在[0,1]范围内，说明是归一化坐标
-        max_coord = float(gt_bboxes.max().data)
-        if max_coord <= 1.0:
-            # 将GT框从归一化坐标转换为像素坐标
-            gt_bboxes = gt_bboxes * 640.0
-
-        # 坐标转换完成
-
     n_anchors = xy_centers.size(0)
     bs, n_max_boxes, _ = gt_bboxes.size()
-    _gt_bboxes = gt_bboxes.reshape([-1, 4])
+
+    # 将GT框从中心点格式转换为角点格式
+    gt_bboxes_xyxy = jt.zeros_like(gt_bboxes)
+    gt_bboxes_xyxy[..., 0] = gt_bboxes[..., 0] - gt_bboxes[..., 2] / 2  # x1
+    gt_bboxes_xyxy[..., 1] = gt_bboxes[..., 1] - gt_bboxes[..., 3] / 2  # y1
+    gt_bboxes_xyxy[..., 2] = gt_bboxes[..., 0] + gt_bboxes[..., 2] / 2  # x2
+    gt_bboxes_xyxy[..., 3] = gt_bboxes[..., 1] + gt_bboxes[..., 3] / 2  # y2
+
+    _gt_bboxes = gt_bboxes_xyxy.reshape([-1, 4])
     xy_centers = xy_centers.unsqueeze(0).repeat(bs * n_max_boxes, 1, 1)
     gt_bboxes_lt = _gt_bboxes[:, 0:2].unsqueeze(1).repeat(1, n_anchors, 1)
     gt_bboxes_rb = _gt_bboxes[:, 2:4].unsqueeze(1).repeat(1, n_anchors, 1)

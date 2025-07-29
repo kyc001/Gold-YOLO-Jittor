@@ -74,33 +74,18 @@ class ComputeLoss:
                     print(f"   outputs[{i}]形状: {item.shape}")
                     print(f"   outputs[{i}]数值范围: [{item.min():.6f}, {item.max():.6f}]")
 
-        # 修复模型输出解析 - 处理单tensor输出
+        # 🚨 深度修复：正确解析模型输出格式
         if isinstance(outputs, (list, tuple)) and len(outputs) == 3:
-            # 标准的三输出格式
+            # ✅ 训练模式：标准的三输出格式 (feats, pred_scores, pred_distri)
             feats, pred_scores, pred_distri = outputs
-            # print(f"🔍 [解析成功] feats长度: {len(feats)}, pred_scores形状: {pred_scores.shape}, pred_distri形状: {pred_distri.shape}")
-        elif hasattr(outputs, 'shape') and len(outputs.shape) == 3:
-            # 单tensor输出格式 [batch, anchors, channels]
-            # YOLO标准格式：[x, y, w, h, objectness, class1, class2, ..., classN]
-            batch_size, num_anchors, total_channels = outputs.shape
-
-            # 检查通道数：4(坐标) + 1(置信度) + num_classes(类别)
-            expected_channels = 4 + 1 + self.num_classes
-            if total_channels >= expected_channels:
-                # 标准YOLO格式：前4个是坐标，第5个是置信度，后面是类别概率
-                pred_distri = outputs[:, :, :4]  # [batch, anchors, 4] - 坐标
-                pred_objectness = outputs[:, :, 4:5]  # [batch, anchors, 1] - 置信度
-                pred_classes = outputs[:, :, 5:5+self.num_classes]  # [batch, anchors, num_classes] - 类别
-
-                # 修复：pred_scores只包含类别概率，不包含置信度
-                pred_scores = pred_classes  # [batch, anchors, num_classes] - 只有类别概率
-
-                # 创建虚拟的feats用于anchor生成
-                feats = self._create_dummy_feats(batch_size)
-            else:
-                raise ValueError(f"输出通道数不足！期望至少{expected_channels}(4+1+{self.num_classes})，得到{total_channels}")
+            print(f"✅ [训练模式] feats长度: {len(feats)}, pred_scores形状: {pred_scores.shape}, pred_distri形状: {pred_distri.shape}")
         else:
-            raise ValueError(f"模型输出格式错误！期望(feats, pred_scores, pred_distri)或单tensor，得到: {type(outputs)}")
+            # ❌ 推理模式输出不应该进入损失函数！
+            # 损失函数只在训练时调用，推理时不应该计算损失
+            raise ValueError(f"🚨 损失函数只能在训练模式下调用！推理模式输出不应该进入损失函数。\n"
+                           f"   当前输出类型: {type(outputs)}\n"
+                           f"   期望训练模式输出: (feats, pred_scores, pred_distri)\n"
+                           f"   请检查模型的training状态！")
         # print(f"🔍 [锚点生成] 开始生成锚点")
         print(f"   feats长度: {len(feats)}")
         for i, feat in enumerate(feats):
@@ -277,27 +262,40 @@ class ComputeLoss:
                 batch_targets.append([])
 
             # 逐个处理目标，避免批量操作导致的shape问题
-            for i in range(targets_numpy.shape[0]):
-                try:
-                    item = targets_numpy[i]
-                    # 修复：处理多维数组情况
-                    if item.ndim > 1:
-                        # 如果是多维数组，取第一行
-                        item = item[0]
+            # 关键修复：对于[batch_size, num_targets, 6]格式，需要遍历所有目标
+            if len(targets_numpy.shape) == 3:  # [batch_size, num_targets, 6]
+                for b in range(targets_numpy.shape[0]):  # 遍历batch
+                    for i in range(targets_numpy.shape[1]):  # 遍历目标
+                        try:
+                            item = targets_numpy[b, i]  # 取第b个batch的第i个目标
 
-                    # 修复：正确处理输入格式 [class_id, x, y, w, h, 0]
-                    if len(item) >= 6:  # 6列格式：[class_id, x, y, w, h, 0]
-                        # 对于我们的数据格式，batch_idx应该从外层循环获得
-                        batch_idx = 0  # 单batch情况
-                        if batch_idx < batch_size:
-                            # 正确提取：item[0]是class_id, item[1:5]是坐标
-                            target_data = [float(item[0]), float(item[1]), float(item[2]), float(item[3]), float(item[4])]
+                            # 修复：正确处理输入格式 [batch_idx, class_id, x, y, w, h]
+                            if len(item) >= 6:  # 6列格式：[batch_idx, class_id, x, y, w, h]
+                                # 正确提取batch_idx
+                                batch_idx = int(item[0])
+                                if batch_idx < batch_size:
+                                    # 正确提取：item[1]是class_id, item[2:6]是坐标
+                                    target_data = [float(item[1]), float(item[2]), float(item[3]), float(item[4]), float(item[5])]
+                                    batch_targets[batch_idx].append(target_data)
+                                    print(f"✅ [数据解析] 成功处理目标{i}: batch={batch_idx}, cls={int(item[1])}")
+                        except Exception as e:
+                            print(f"❌ [数据解析] 目标{i}处理失败: {e}")
+            else:  # [num_targets, 6] 格式
+                for i in range(targets_numpy.shape[0]):
+                    try:
+                        item = targets_numpy[i]
+                        # 修复：处理多维数组情况
+                        if item.ndim > 1:
+                            item = item[0]
 
-                            batch_targets[batch_idx].append(target_data)
-
-                            # 数据修复成功
-                except Exception as e:
-                    print(f"❌ [数据解析] 目标{i}处理失败: {e}")
+                        if len(item) >= 6:
+                            batch_idx = int(item[0])
+                            if batch_idx < batch_size:
+                                target_data = [float(item[1]), float(item[2]), float(item[3]), float(item[4]), float(item[5])]
+                                batch_targets[batch_idx].append(target_data)
+                                print(f"✅ [数据解析] 成功处理目标{i}: batch={batch_idx}, cls={int(item[1])}")
+                    except Exception as e:
+                        print(f"❌ [数据解析] 目标{i}处理失败: {e}")
                     continue  # 跳过有问题的目标
 
             # 找到最大目标数量，但限制上限避免内存问题
@@ -407,28 +405,22 @@ class VarifocalLoss(nn.Module):
         super(VarifocalLoss, self).__init__()
 
     def execute(self, pred_score, gt_score, label, alpha=0.75, gamma=2.0):
-        # 确保所有输入都是float32
+        # 完全照抄PyTorch版本的实现
         pred_score = pred_score.float32()
         gt_score = gt_score.float32()
         label = label.float32()
 
-        # 修复梯度爆炸问题：使用sigmoid后的概率计算权重
-        # 这样避免了logits的幂运算导致的数值爆炸
-        pred_score_sigmoid = jt.sigmoid(pred_score)
+        # 完全照抄PyTorch版本：pred_score已经是sigmoid后的概率
+        weight = alpha * pred_score.pow(gamma) * (1 - label) + gt_score * label
 
-        # 使用sigmoid后的概率计算权重，避免梯度爆炸
-        weight = alpha * pred_score_sigmoid.pow(gamma) * (1 - label) + gt_score * label
-
-        # 数值稳定的BCE损失计算
+        # 完全照抄PyTorch版本：F.binary_cross_entropy期望概率输入，不是logits
+        # Jittor版本：手动实现binary_cross_entropy
         eps = 1e-7
-        pred_score_sigmoid = jt.clamp(pred_score_sigmoid, eps, 1 - eps)
-        bce_loss = -(gt_score * jt.log(pred_score_sigmoid) + (1 - gt_score) * jt.log(1 - pred_score_sigmoid))
+        pred_score = jt.clamp(pred_score, eps, 1 - eps)
+        bce_loss = -(gt_score * jt.log(pred_score) + (1 - gt_score) * jt.log(1 - pred_score))
 
-        # 计算最终损失，添加数值稳定性保护
+        # 计算最终损失
         loss = (bce_loss * weight).sum()
-
-        # 防止损失过大导致梯度爆炸
-        loss = jt.clamp(loss, 0.0, 1000.0)
 
         return loss
 

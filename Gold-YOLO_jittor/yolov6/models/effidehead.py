@@ -66,10 +66,24 @@ class Detect(nn.Module):
             conv.weight.data = jt.zeros_like(conv.weight.data)
 
         # 修复关键错误：与PyTorch版本对齐，总是初始化proj_conv
+        # 严格对齐PyTorch版本：proj和proj_conv.weight都不需要梯度
         self.proj = jt.linspace(0, self.reg_max, self.reg_max + 1)
-        # Jittor的权重赋值方式
+        self.proj.requires_grad = False  # 关键修复：不需要梯度
+
+        # Jittor的权重赋值方式 - 修复数据类型不匹配问题
         proj_weight = self.proj.view([1, self.reg_max + 1, 1, 1]).clone().detach()
-        self.proj_conv.weight = jt.array(proj_weight.numpy(), dtype=self.proj_conv.weight.dtype)
+        # 确保数据类型匹配
+        proj_weight = proj_weight.astype(self.proj_conv.weight.dtype)
+        self.proj_conv.weight.assign(proj_weight)  # 使用assign方法
+        self.proj_conv.weight.requires_grad = False  # 关键修复：不需要梯度
+
+        print(f"🔧 EffiDeHead初始化完成:")
+        print(f"   use_dfl: {self.use_dfl}")
+        print(f"   reg_max: {self.reg_max}")
+        print(f"   proj形状: {self.proj.shape}")
+        print(f"   proj_conv权重形状: {self.proj_conv.weight.shape}")
+        print(f"   proj需要梯度: {self.proj.requires_grad}")
+        print(f"   proj_conv权重需要梯度: {self.proj_conv.weight.requires_grad}")
     
     def execute(self, x):
         """Jittor版本的前向传播"""
@@ -86,7 +100,8 @@ class Detect(nn.Module):
                 reg_feat = self.reg_convs[i](reg_x)
                 reg_output = self.reg_preds[i](reg_feat)
 
-                cls_output = jt.sigmoid(cls_output)  # 使用jt.sigmoid
+                # 完全照抄PyTorch版本：训练时也应用sigmoid
+                cls_output = jt.sigmoid(cls_output)
                 cls_score_list.append(cls_output.flatten(2).permute((0, 2, 1)))
 
                 # 修复关键错误：正确处理DFL输出格式
@@ -121,6 +136,7 @@ class Detect(nn.Module):
                     reg_output = reg_output.reshape([-1, 4, self.reg_max + 1, l]).permute(0, 2, 1, 3)
                     reg_output = self.proj_conv(nn.softmax(reg_output, dim=1))
                 
+                # 完全照抄PyTorch版本：推理时也应用sigmoid
                 cls_output = jt.sigmoid(cls_output)
                 cls_score_list.append(cls_output.reshape([b, self.nc, l]))
                 reg_dist_list.append(reg_output.reshape([b, 4, l]))
@@ -131,11 +147,12 @@ class Detect(nn.Module):
             pred_bboxes = dist2bbox(reg_dist_list, anchor_points, box_format='xywh')
             pred_bboxes *= stride_tensor
 
-            # 严格对齐PyTorch版本的输出格式
+            # 完全照抄PyTorch版本的输出格式
+            # PyTorch版本第125-132行的完全照抄
             return jt.concat([
-                pred_bboxes,
-                jt.ones((b, pred_bboxes.shape[1], 1), dtype=pred_bboxes.dtype),  # objectness
-                cls_score_list
+                pred_bboxes,      # [b, anchors, 4] 坐标
+                jt.ones((b, pred_bboxes.shape[1], 1), dtype=pred_bboxes.dtype),  # 完全照抄：objectness全为1
+                cls_score_list    # [b, anchors, 20] 类别分数
             ], dim=-1)
 
 

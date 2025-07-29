@@ -119,15 +119,26 @@ class TaskAlignedAssigner(nn.Module):
         return mask_pos, align_metric, overlaps
     
     def get_box_metrics(self, pd_scores, pd_bboxes, gt_labels, gt_bboxes):
-        
+
+        # 严格对齐PyTorch版本的实现
+        pd_scores = pd_scores.permute(0, 2, 1)  # 转换维度顺序，对齐PyTorch版本
         gt_labels = gt_labels.astype(jt.int64)
         ind = jt.zeros([2, self.bs, self.n_max_boxes], dtype=jt.int64)
         ind[0] = jt.arange(end=self.bs).view(-1, 1).repeat(1, self.n_max_boxes)
         ind[1] = gt_labels.squeeze(-1)
-        # get the scores of each grid for each gt cls
-        bbox_scores = pd_scores[ind[0], :, ind[1]]  # b, max_num_obj, h*w
-        
-        overlaps = iou_calculator(gt_bboxes.unsqueeze(2), pd_bboxes.unsqueeze(1))
+        # 修复：严格对齐PyTorch版本的索引方式
+        bbox_scores = pd_scores[ind[0], ind[1]]  # 修复索引，移除多余的维度
+
+        # 完全照抄PyTorch版本：pd_scores已经是sigmoid后的概率，不需要再次sigmoid
+
+        # 将GT框从中心点格式转换为角点格式
+        gt_bboxes_xyxy = jt.zeros_like(gt_bboxes)
+        gt_bboxes_xyxy[..., 0] = gt_bboxes[..., 0] - gt_bboxes[..., 2] / 2  # x1
+        gt_bboxes_xyxy[..., 1] = gt_bboxes[..., 1] - gt_bboxes[..., 3] / 2  # y1
+        gt_bboxes_xyxy[..., 2] = gt_bboxes[..., 0] + gt_bboxes[..., 2] / 2  # x2
+        gt_bboxes_xyxy[..., 3] = gt_bboxes[..., 1] + gt_bboxes[..., 3] / 2  # y2
+
+        overlaps = iou_calculator(gt_bboxes_xyxy, pd_bboxes)  # 使用角点格式计算IoU
         align_metric = bbox_scores.pow(self.alpha) * overlaps.pow(self.beta)
         return align_metric, overlaps
     

@@ -412,3 +412,96 @@ Gold-YOLO_jittor/start_training.py Gold-YOLO_jittor/train_gold_yolo_n_200epochs.
 维护行为日志，完成如下任务：
 检查项目目录，清理冗余文件脚本，无用重复数据
 维护一个用于单张图片过拟合训练并推理测试的脚本：要求能显示训练进度，要求推理测试结果可视化，要求检测识别出来物体与真实标注一致（对于单张图片来说这应该不难
+
+维护行为日志，修复以下问题：首先在可视化结果中并没有模型的预测结果，其次我发现类别映射好像错了！！！！索引11对应的是小狗，这是VOC数据集的子集，我认为是不是模型里面的索引就错了，严格深入检查！！！应该与这个保持一致的names:
+  0: aeroplane
+  1: bicycle
+  2: bird
+  3: boat
+  4: bottle
+  5: bus
+  6: car
+  7: cat
+  8: chair
+  9: cow
+  10: diningtable
+  11: dog
+  12: horse
+  13: motorbike
+  14: person
+  15: pottedplant
+  16: sheep
+  17: sofa
+  18: train 
+  19: tvmonitor
+nc: 20
+train: /home/kyc/project/GOLD-YOLO/data/voc2012_subset/images
+val: /home/kyc/project/GOLD-YOLO/data/voc2012_subset/images
+
+
+维护行为日志，修复以下问题：过拟合对比结果没有画出检测出来的结果啊！！！修复该问题
+
+
+维护行为日志，修复自检问题：一切修改都要遵从pytorch版本，因为该项目最终目的就是实现迁移，复现pytorch模型
+希望自检达到的效果是:能够正确识别物体种类，数量，位置
+
+
+
+维护行为日志，完成以下任务：解决问题必须是严谨的，不得简化投机，因为这是个要求100%迁移的项目，你要将简化部分全部删除，保证完整迁移实现。
+这是过拟合训练遇到的问题，供参考：[w 0729 10:44:47.885325 52 grad.cc:81] grads[441] 'detect.proj' doesn't have gradient. It will be set to zero: Var(6552:1:1:1:i0:o0:s1:n0:g1,float32,detect.proj,7086bbe00)[17,]
+[w 0729 10:44:47.885361 52 grad.cc:81] grads[442] 'detect.proj_conv.weight' doesn't have gradient. It will be set to zero: Var(6562:1:1:1:i0:o0:s1:n0:g1,float32,detect.proj_conv.weight,7086b7800)[1,17,1,1,]
+
+
+
+
+维护行为日志，修复自检问题：一切修改都要遵从pytorch版本，因为该项目最终目的就是实现迁移，复现pytorch模型
+希望自检达到的效果是:能够正确识别物体种类，数量，位置
+问题在create_perfect_gold_yolo_model()中分类头的创建！
+
+必须：
+
+检查分类头的权重初始化
+检查分类头的参数冻结状态
+对比PyTorch版本的分类头实现
+修复分类头的创建过程
+
+
+维护行为日志，修复自检问题：一切修改都要遵从pytorch版本，因为该项目最终目的就是实现迁移，复现pytorch模型
+希望单张图片的过拟合训练自检达到的效果是:能够正确识别物体种类，数量，位置 我希望你能更深入的找到原因！！！
+我们认为只有种类识别正确才算入正确识别数量！还要考虑识别的位置！！
+不断进行自检，找到问题，修复问题，直到自检成功为止！！
+
+
+pip install uv    -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+
+维护行为日志，完善自检问题：目前来看再检测结果中出现了期望结果，不过置信度太低了，且没有正确给出数量？能否绘制可视化检测结果，判断出数量，以及能否提高置信度，若是不能，分析原因？整个流程确认无误后就可以开始对应pytorch版本的200轮完整训练了
+
+
+
+
+ Epoch 100: Loss 2.485047
+     期望类别学习情况:
+       boat(类别3): 最大0.031711, 平均0.001260, 激活1625
+       dog(类别11): 最大0.227542, 平均0.005088, 激活1782
+       person(类别14): 最大0.129110, 平均0.001701, 激活1401
+     NMS后检测数量: 100
+     检测类别统计: {'aeroplane': 100}
+     期望类别检测数: 0
+     置信度最高的10个检测:
+        1. ❌aeroplane: 0.227542
+        2. ❌aeroplane: 0.195863
+        3. ❌aeroplane: 0.166524
+        4. ❌aeroplane: 0.125187
+        5. ❌aeroplane: 0.106973
+        6. ❌aeroplane: 0.104235
+        7. ❌aeroplane: 0.101416
+        8. ❌aeroplane: 0.101129
+        9. ❌aeroplane: 0.099830
+       10. ❌aeroplane: 0.099043
+     种类准确率: 0.0%
+     正确识别类别: set()
+     💾 完美可视化已保存: runs/perfect_overfit_visualization/epoch_100_perfect_visualization.jpg
+
+📊 训练完成!
+   最佳种类准确率: 0.0% (Epoch 0)
