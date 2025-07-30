@@ -53,8 +53,8 @@ model = dict(
                 strides=[8, 16, 32],
                 atss_warmup_epoch=0,
                 iou_type='siou',
-                use_dfl=False,  # gold-yolo-n原始配置：禁用DFL
-                reg_max=0,      # gold-yolo-n原始配置：reg_max=0
+                use_dfl=False,  # 100%对齐PyTorch版本：禁用DFL
+                reg_max=0,      # 100%对齐PyTorch版本：reg_max=0
                 distill_weight={
                     'class': 1.0,
                     'dfl'  : 1.0,

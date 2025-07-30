@@ -131,14 +131,9 @@ class TaskAlignedAssigner(nn.Module):
 
         # 完全照抄PyTorch版本：pd_scores已经是sigmoid后的概率，不需要再次sigmoid
 
-        # 将GT框从中心点格式转换为角点格式
-        gt_bboxes_xyxy = jt.zeros_like(gt_bboxes)
-        gt_bboxes_xyxy[..., 0] = gt_bboxes[..., 0] - gt_bboxes[..., 2] / 2  # x1
-        gt_bboxes_xyxy[..., 1] = gt_bboxes[..., 1] - gt_bboxes[..., 3] / 2  # y1
-        gt_bboxes_xyxy[..., 2] = gt_bboxes[..., 0] + gt_bboxes[..., 2] / 2  # x2
-        gt_bboxes_xyxy[..., 3] = gt_bboxes[..., 1] + gt_bboxes[..., 3] / 2  # y2
-
-        overlaps = iou_calculator(gt_bboxes_xyxy, pd_bboxes)  # 使用角点格式计算IoU
+        # 修复关键错误：gt_bboxes已经是xyxy格式（经过preprocess处理），不需要转换
+        # gt_bboxes来自preprocess函数，已经是xyxy格式
+        overlaps = iou_calculator(gt_bboxes, pd_bboxes)  # 直接使用xyxy格式计算IoU
         align_metric = bbox_scores.pow(self.alpha) * overlaps.pow(self.beta)
         return align_metric, overlaps
     
@@ -167,8 +162,12 @@ class TaskAlignedAssigner(nn.Module):
         target_bboxes = gt_bboxes.view(-1, 4)[target_gt_idx]
         
         # assigned target scores
+        # 修复关键错误：正确处理背景类别
+        target_labels_for_scores = jt.where(fg_mask, target_labels, jt.full_like(target_labels, self.num_classes))
+        target_scores = jt.nn.one_hot(target_labels_for_scores, self.num_classes + 1).float()
+        target_scores = target_scores[:, :, :self.num_classes]  # 移除背景类别维度
+
+        # target_labels中背景设为bg_idx，但不影响one_hot编码
         target_labels = jt.where(fg_mask, target_labels, jt.full_like(target_labels, self.bg_idx))
-        target_scores = jt.nn.one_hot(target_labels, self.num_classes + 1).float()
-        target_scores = target_scores[:, :, :self.num_classes]
         
         return target_labels, target_bboxes, target_scores

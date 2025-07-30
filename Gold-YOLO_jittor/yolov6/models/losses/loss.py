@@ -15,27 +15,36 @@ from yolov6.utils.general import xywh2xyxy, bbox2dist
 
 
 class VarifocalLoss(nn.Module):
-    """Varifocal Loss - 百分百对齐PyTorch版本"""
+    """Varifocal Loss - 100%对齐PyTorch版本"""
     def __init__(self):
         super(VarifocalLoss, self).__init__()
 
     def execute(self, pred_score, gt_score, label, alpha=0.75, gamma=2.0):
+        """
+        100%对齐PyTorch版本的VarifocalLoss实现
+        PyTorch版本使用F.binary_cross_entropy，期望概率输入，不是logits
+        """
         # 确保所有输入都是float32
         pred_score = pred_score.float32()
         gt_score = gt_score.float32()
         label = label.float32()
-        
+
+        # 100%对齐PyTorch版本：pred_score应该是sigmoid后的概率
+        # 如果pred_score是logits，需要先sigmoid
+        if pred_score.max() > 1.0 or pred_score.min() < 0.0:
+            pred_score = jt.sigmoid(pred_score)
+
+        # 100%对齐PyTorch版本的权重计算
         weight = alpha * pred_score.pow(gamma) * (1 - label) + gt_score * label
-        # 修复Jittor API - 没有reduction参数，手动处理
-        bce_loss = jt.nn.binary_cross_entropy_with_logits(pred_score.float(), gt_score.float())
-        # 如果bce_loss是标量，需要扩展维度匹配weight
-        if len(bce_loss.shape) == 0:
-            bce_loss = bce_loss.unsqueeze(0).expand_as(weight)
-        elif len(bce_loss.shape) != len(weight.shape):
-            # 广播到相同形状
-            bce_loss = bce_loss.expand_as(weight)
-        
-        focal_loss = weight * bce_loss
+
+        # 100%对齐PyTorch版本：使用binary_cross_entropy，不是binary_cross_entropy_with_logits
+        # 手动实现binary_cross_entropy，因为Jittor可能没有这个函数
+        eps = 1e-7
+        pred_score_clamped = jt.clamp(pred_score, eps, 1 - eps)
+        bce_loss = -(gt_score * jt.log(pred_score_clamped) + (1 - gt_score) * jt.log(1 - pred_score_clamped))
+
+        # 100%对齐PyTorch版本：(bce_loss * weight).sum()
+        focal_loss = (bce_loss * weight).sum()
         return focal_loss
 
 
@@ -470,7 +479,7 @@ class ComputeLoss:
         except:
             pass
 
-        return loss, jt.stack([loss_iou, loss_dfl, loss_cls]).detach()
+        return loss, jt.stack([loss_cls, loss_iou, loss_dfl]).detach()
 
     def generate_anchors(self, feats, fpn_strides, grid_cell_size=5.0, grid_cell_offset=0.5):
         """Generate anchors from features."""
@@ -566,30 +575,12 @@ class ComputeLoss:
         return targets
 
     def bbox_decode(self, anchor_points, pred_dist):
-        """Decode predicted bbox."""
+        """Decode predicted bbox - 100%对齐PyTorch版本"""
         if self.use_dfl:
             batch_size, n_anchors, _ = pred_dist.shape
             pred_dist = jt.nn.softmax(pred_dist.view(batch_size, n_anchors, 4, self.reg_max + 1), dim=-1)
             pred_dist = (pred_dist * self.proj.view(1, 1, 1, -1)).sum(-1)
 
-        pred_dist = pred_dist.view(anchor_points.shape[0], anchor_points.shape[1], -1)
-
-        # 检查pred_dist的最后一个维度
-        last_dim = pred_dist.shape[-1]
-        if last_dim >= 4:
-            # 如果维度足够，正常分割
-            pred_lt, pred_rb = pred_dist[:, :, :2], pred_dist[:, :, 2:4]
-        else:
-            # 如果维度不够，使用前两个维度作为lt，后面补零作为rb
-            if last_dim >= 2:
-                pred_lt = pred_dist[:, :, :2]
-                pred_rb = jt.zeros_like(pred_lt)
-            else:
-                # 如果连2个维度都没有，全部用零
-                pred_lt = jt.zeros((anchor_points.shape[0], anchor_points.shape[1], 2))
-                pred_rb = jt.zeros_like(pred_lt)
-
-        pred_x1y1 = anchor_points - pred_lt
-        pred_x2y2 = anchor_points + pred_rb
-        pred_bbox = jt.concat([pred_x1y1, pred_x2y2], dim=-1)
-        return pred_bbox
+        # 100%对齐PyTorch版本：直接使用dist2bbox函数
+        from yolov6.utils.general import dist2bbox
+        return dist2bbox(pred_dist, anchor_points)

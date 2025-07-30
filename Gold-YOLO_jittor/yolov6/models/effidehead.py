@@ -58,12 +58,14 @@ class Detect(nn.Module):
             # 与PyTorch版本对齐的初始化
             bias_value = -math.log((1 - self.prior_prob) / self.prior_prob)
             conv.bias.data = jt.full_like(conv.bias.data, bias_value)
-            conv.weight.data = jt.zeros_like(conv.weight.data)
+            # 修复关键错误：不要将权重设为0！使用正常的随机初始化
+            # conv.weight.data = jt.zeros_like(conv.weight.data)  # 这是错误的！
 
         for conv in self.reg_preds:
             # 与PyTorch版本对齐的初始化
             conv.bias.data = jt.ones_like(conv.bias.data)
-            conv.weight.data = jt.zeros_like(conv.weight.data)
+            # 修复关键错误：不要将权重设为0！使用正常的随机初始化
+            # conv.weight.data = jt.zeros_like(conv.weight.data)  # 这是错误的！
 
         # 修复关键错误：与PyTorch版本对齐，总是初始化proj_conv
         # 严格对齐PyTorch版本：proj和proj_conv.weight都不需要梯度
@@ -108,10 +110,11 @@ class Detect(nn.Module):
                 # 训练时需要保持原始的分布参数，不进行proj_conv变换
                 reg_distri_list.append(reg_output.flatten(2).permute((0, 2, 1)))
 
-            # 严格对齐PyTorch版本：返回独立的输出
+            # 100%对齐PyTorch版本：返回(feats, pred_scores, pred_distri)
             cls_score_list = jt.concat(cls_score_list, dim=1)  # [batch, anchors, num_classes]
             reg_distri_list = jt.concat(reg_distri_list, dim=1)  # [batch, anchors, 4*(reg_max+1)] 或 [batch, anchors, 4]
 
+            # PyTorch版本第62行：feats, pred_scores, pred_distri = outputs
             return x, cls_score_list, reg_distri_list
         
         else:

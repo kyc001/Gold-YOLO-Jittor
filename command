@@ -467,6 +467,7 @@ val: /home/kyc/project/GOLD-YOLO/data/voc2012_subset/images
 
 
 维护行为日志，修复自检问题：一切修改都要遵从pytorch版本，因为该项目最终目的就是实现迁移，复现pytorch模型
+训练速度为什么这么慢？？？？以及我没有看到可视化结果啊！！！
 希望单张图片的过拟合训练自检达到的效果是:能够正确识别物体种类，数量，位置 我希望你能更深入的找到原因！！！
 我们认为只有种类识别正确才算入正确识别数量！还要考虑识别的位置！！
 不断进行自检，找到问题，修复问题，直到自检成功为止！！
@@ -505,3 +506,135 @@ pip install uv    -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 📊 训练完成!
    最佳种类准确率: 0.0% (Epoch 0)
+
+
+
+其实class_idx问题已经发现很多次了，每次问题都出现在max上，无非就是jittor与pytorch函数具体实现方式不一样，如果实在无法解决，就完整实现，不借用函数。顺便检查一下其他地方有没有一样的问题
+
+
+继续维护行为日志,完成以下任务：
+
+
+修复OpenCV坐标错误：继续完善可视化脚本
+
+
+
+我看到boat类别的置信度似乎很低啊，这是正常的吗？？
+为什么自检训练中出现了DFLloss？？？检查一下是否有这个问题？？？
+500轮太久了，不知道预计要多久才能结束，加入进度条显示一下进度，或者改到200轮。
+等会开启完整训练的时候，调试信息可以不要这么多！训练参数要与pytorch版本一致，用vocsubset进行200轮训练！
+
+
+
+下一步行动
+需要深入检查训练过程中的：
+
+IoU损失计算：为什么IoU损失一直为0
+标签分配过程：TaskAlignedAssigner是否正确分配正样本
+坐标回归机制：bbox_decode函数是否正确
+
+
+
+
+
+单张图片训练200轮为什么这么久？pytorch版本使用完整数据集训练也不要这么久吧？？
+进度: |██████████████████████████████--------------------| 60.0% (120/200)
+   Epoch 120: Loss 2.107678 (5.39s)
+     损失分解: 分类1.662609, IoU0.000000, DFL0.445070
+     ⚠️ DFL损失不为0，可能有问题
+     期望类别学习情况:
+       boat(类别3): 最大0.012335, 平均0.002211, 激活2711
+       dog(类别11): 最大0.150558, 平均0.003444, 激活2797
+       person(类别14): 最大0.049747, 平均0.002582, 激活2791
+
+我的意思是用过拟合脚本重新过拟合学习另外一张图片，看看是否也能正确学习到特征！
+还有，期望类别搞错了！！！标签映射是：
+    names:
+  0: aeroplane
+  1: bicycle
+  2: bird
+  3: boat
+  4: bottle
+  5: bus
+  6: car
+  7: cat
+  8: chair
+  9: cow
+  10: diningtable
+  11: dog
+  12: horse
+  13: motorbike
+  14: person
+  15: pottedplant
+  16: sheep
+  17: sofa
+  18: train 
+  19: tvmonitor
+不要搞错了
+
+
+继续维护行为日志，调用 mcp-feedback-enhanced mcp反馈工具
+检测出大量物体，与实际不符！！！数量不对！！
+可视化结果能不能用预测结果和真是结果做对比，在同一张图片上面很乱
+
+
+
+
+你要明白自检的目的是什么！！！！自检的目的就是为了检验整个模型是否能够正常运转，你用简化的函数就没有意义了！！！
+因此不能简化！！！如果jittor内部API实现方式没有差别，尽量用内部的，速度也会更快！
+继续维护行为日志，发现了几个问题
+1.置信度阈值也太低了吧
+2.一次训练五六秒，这合理吗？？怎么越改越慢？？
+3.而且你光说有几个检测结果，没有生成具体图片我怎么知道效果？
+4.另外，能不能修复这些警告：
+  epoch_loss = float(loss.data) if hasattr(loss.data, '__len__') and len(loss.data) == 1 else float(loss.data)
+/home/kyc/project/GOLD-YOLO/Gold-YOLO_jittor/ultra_fast_overfitting_test.py:220: DeprecationWarning: Conversion of an array with ndim > 0 to a scalar is deprecated, and will error in future. Ensure you extract a single element from your array before performing this operation. (Deprecated NumPy 1.25.)
+  epoch_loss = float(loss.data) if hasattr(loss.data, '__len__') and len(loss.data) == 1 else float(loss.data)
+/home/kyc/project/GOLD-YOLO/Gold-YOLO_jittor/ultra_fast_overfitting_test.py:220: DeprecationWarning: Conversion of an array with ndim > 0 to a scalar is deprecated, and will error in future. Ensure you extract a single element from your array before performing this operation. (Deprecated NumPy 1.25.)
+  epoch_loss = float(loss.data) if hasattr(loss.data, '__len__') and len(loss.data) == 1 else float(loss.data)
+/home/kyc/project/GOLD-YOLO/Gold-YOLO_jittor/ultra_fast_overfitting_test.py:220: DeprecationWarning: Conversion of an array with ndim > 0 to a scalar is deprecated, and will error in future. Ensure you extract a single element from your array before performing this operation. (Deprecated NumPy 1.25.)
+
+
+
+损失函数正常：150.14 → 130.03 → 178.94 (有波动但在学习)
+训练速度合理：5.76-6.81秒/轮 (比之前的3.21秒有改善)
+
+
+
+为什么学一张照片都学不好？
+让你解决性能瓶颈，不是你擅自简化，要保证与pytorch对齐！。损失函数: 简化版ComputeLoss (速度更快)
+我怀疑程序没有正确读入图像坐标，所以识别效果这么差！一直学不好！
+解决下面问题！
+🔥 预热编译...
+[w 0730 17:01:19.402137 08 grad.cc:81] grads[76] 'neck.Inject_p4.local_embedding.norm.bn.weight' doesn't have gradient. It will be set to zero: Var(2654:1:3:2:i0:o2:s1:n1:g1,float32,neck.Inject_p4.local_embedding.norm.bn.weight,7058a4400)[64,]
+[w 0730 17:01:19.402175 08 grad.cc:81] grads[78] 'neck.Inject_p4.global_embedding.norm.bn.weight' doesn't have gradient. It will be set to zero: Var(2712:1:3:2:i0:o2:s1:n1:g1,float32,neck.Inject_p4.global_embedding.norm.bn.weight,7082ff800)[64,]
+[w 0730 17:01:19.402181 08 grad.cc:81] grads[80] 'neck.Inject_p4.global_act.norm.bn.weight' doesn't have gradient. It will be set to zero: Var(2770:1:3:2:i0:o2:s1:n1:g1,float32,neck.Inject_p4.global_act.norm.bn.weight,7082fda00)[64,]
+[w 0730 17:01:19.402185 08 grad.cc:81] grads[99] 'neck.Inject_p3.local_embedding.norm.bn.weight' doesn't have gradient. It will be set to zero: Var(3415:1:3:2:i0:o2:s1:n1:g1,float32,neck.Inject_p3.local_embedding.norm.bn.weight,7083e8400)[32,]
+[w 0730 17:01:19.402188 08 grad.cc:81] grads[101] 'neck.Inject_p3.global_embedding.norm.bn.weight' doesn't have gradient. It will be set to zero: Var(3473:1:3:2:i0:o2:s1:n1:g1,float32,neck.Inject_p3.global_embedding.norm.bn.weight,7083e8e00)[32,]
+[w 0730 17:01:19.402190 08 grad.cc:81] grads[103] 'neck.Inject_p3.global_act.norm.bn.weight' doesn't have gradient. It will be set to zero: Var(3531:1:3:2:i0:o2:s1:n1:g1,float32,neck.Inject_p3.global_act.norm.bn.weight,7083eec00)[32,]
+[w 0730 17:01:19.402194 08 grad.cc:81] grads[129] 'neck.Inject_n4.local_embedding.norm.bn.weight' doesn't have gradient. It will be set to zero: Var(4732:1:3:2:i0:o2:s1:n1:g1,float32,neck.Inject_n4.local_embedding.norm.bn.weight,707fffe00)[64,]
+[w 0730 17:01:19.402196 08 grad.cc:81] grads[131] 'neck.Inject_n4.global_embedding.norm.bn.weight' doesn't have gradient. It will be set to zero: Var(4790:1:3:2:i0:o2:s1:n1:g1,float32,neck.Inject_n4.global_embedding.norm.bn.weight,7086fcc00)[64,]
+[w 0730 17:01:19.402198 08 grad.cc:81] grads[133] 'neck.Inject_n4.global_act.norm.bn.weight' doesn't have gradient. It will be set to zero: Var(4848:1:3:2:i0:o2:s1:n1:g1,float32,neck.Inject_n4.global_act.norm.bn.weight,7086fda00)[64,]
+[w 0730 17:01:19.402202 08 grad.cc:81] grads[147] 'neck.Inject_n5.local_embedding.norm.bn.weight' doesn't have gradient. It will be set to zero: Var(5298:1:3:2:i0:o2:s1:n1:g1,float32,neck.Inject_n5.local_embedding.norm.bn.weight,7088fe800)[128,]
+[w 0730 17:01:19.402204 08 grad.cc:81] grads[149] 'neck.Inject_n5.global_embedding.norm.bn.weight' doesn't have gradient. It will be set to zero: Var(5356:1:3:2:i0:o2:s1:n1:g1,float32,neck.Inject_n5.global_embedding.norm.bn.weight,7088ff200)[128,]
+[w 0730 17:01:19.402250 08 grad.cc:81] grads[151] 'neck.Inject_n5.global_act.norm.bn.weight' doesn't have gradient. It will be set to zero: Var(5414:1:3:2:i0:o2:s1:n1:g1,float32,neck.Inject_n5.global_act.norm.bn.weight,7088ffc00)[128,]
+[w 0730 17:01:19.402258 08 grad.cc:81] grads[387] 'neck.Inject_p4.local_embedding.norm.bn.bias' doesn't have gradient. It will be set to zero: Var(2659:1:2:1:i0:o1:s1:n1:g1,float32,neck.Inject_p4.local_embedding.norm.bn.bias,7082fd200)[64,]
+[w 0730 17:01:19.402271 08 grad.cc:81] grads[390] 'neck.Inject_p4.global_embedding.norm.bn.bias' doesn't have gradient. It will be set to zero: Var(2717:1:2:1:i0:o1:s1:n1:g1,float32,neck.Inject_p4.global_embedding.norm.bn.bias,7082ffc00)[64,]
+[w 0730 17:01:19.402276 08 grad.cc:81] grads[393] 'neck.Inject_p4.global_act.norm.bn.bias' doesn't have gradient. It will be set to zero: Var(2775:1:2:1:i0:o1:s1:n1:g1,float32,neck.Inject_p4.global_act.norm.bn.bias,7082fde00)[64,]
+[w 0730 17:01:19.402289 08 grad.cc:81] grads[413] 'neck.Inject_p3.local_embedding.norm.bn.bias' doesn't have gradient. It will be set to zero: Var(3420:1:2:1:i0:o1:s1:n1:g1,float32,neck.Inject_p3.local_embedding.norm.bn.bias,7083e8800)[32,]
+[w 0730 17:01:19.402303 08 grad.cc:81] grads[416] 'neck.Inject_p3.global_embedding.norm.bn.bias' doesn't have gradient. It will be set to zero: Var(3478:1:2:1:i0:o1:s1:n1:g1,float32,neck.Inject_p3.global_embedding.norm.bn.bias,7083ee200)[32,]
+[w 0730 17:01:19.402316 08 grad.cc:81] grads[419] 'neck.Inject_p3.global_act.norm.bn.bias' doesn't have gradient. It will be set to zero: Var(3536:1:2:1:i0:o1:s1:n1:g1,float32,neck.Inject_p3.global_act.norm.bn.bias,7083ec400)[32,]
+[w 0730 17:01:19.402335 08 grad.cc:81] grads[449] 'neck.Inject_n4.local_embedding.norm.bn.bias' doesn't have gradient. It will be set to zero: Var(4737:1:2:1:i0:o1:s1:n1:g1,float32,neck.Inject_n4.local_embedding.norm.bn.bias,7083ffe00)[64,]
+[w 0730 17:01:19.402341 08 grad.cc:81] grads[452] 'neck.Inject_n4.global_embedding.norm.bn.bias' doesn't have gradient. It will be set to zero: Var(4795:1:2:1:i0:o1:s1:n1:g1,float32,neck.Inject_n4.global_embedding.norm.bn.bias,7086fd000)[64,]
+[w 0730 17:01:19.402355 08 grad.cc:81] grads[455] 'neck.Inject_n4.global_act.norm.bn.bias' doesn't have gradient. It will be set to zero: Var(4853:1:2:1:i0:o1:s1:n1:g1,float32,neck.Inject_n4.global_act.norm.bn.bias,7086fd600)[64,]
+[w 0730 17:01:19.402370 08 grad.cc:81] grads[470] 'neck.Inject_n5.local_embedding.norm.bn.bias' doesn't have gradient. It will be set to zero: Var(5303:1:2:1:i0:o1:s1:n1:g1,float32,neck.Inject_n5.local_embedding.norm.bn.bias,7088fec00)[128,]
+[w 0730 17:01:19.402375 08 grad.cc:81] grads[473] 'neck.Inject_n5.global_embedding.norm.bn.bias' doesn't have gradient. It will be set to zero: Var(5361:1:2:1:i0:o1:s1:n1:g1,float32,neck.Inject_n5.global_embedding.norm.bn.bias,7088ff600)[128,]
+[w 0730 17:01:19.402387 08 grad.cc:81] grads[476] 'neck.Inject_n5.global_act.norm.bn.bias' doesn't have gradient. It will be set to zero: Var(5419:1:2:1:i0:o1:s1:n1:g1,float32,neck.Inject_n5.global_act.norm.bn.bias,7085c5a00)[128,]
+
+
+
+看了一下数据集，其实可以把读取改成500*500,因为最大尺寸就是500！
+
+
+
+ 1. ⚠️ pred_distri有负值: [-3.290800, 6.677304]

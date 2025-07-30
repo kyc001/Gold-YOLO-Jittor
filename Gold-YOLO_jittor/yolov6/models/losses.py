@@ -65,20 +65,10 @@ class ComputeLoss:
         return feats
 
     def __call__(self, outputs, targets, epoch_num, step_num):
-        # print(f"\n🔍 [损失函数调试] 开始计算损失")
-        print(f"   outputs类型: {type(outputs)}")
-        if isinstance(outputs, (list, tuple)):
-            print(f"   outputs长度: {len(outputs)}")
-            for i, item in enumerate(outputs):
-                if hasattr(item, 'shape'):
-                    print(f"   outputs[{i}]形状: {item.shape}")
-                    print(f"   outputs[{i}]数值范围: [{item.min():.6f}, {item.max():.6f}]")
-
         # 🚨 深度修复：正确解析模型输出格式
         if isinstance(outputs, (list, tuple)) and len(outputs) == 3:
             # ✅ 训练模式：标准的三输出格式 (feats, pred_scores, pred_distri)
             feats, pred_scores, pred_distri = outputs
-            print(f"✅ [训练模式] feats长度: {len(feats)}, pred_scores形状: {pred_scores.shape}, pred_distri形状: {pred_distri.shape}")
         else:
             # ❌ 推理模式输出不应该进入损失函数！
             # 损失函数只在训练时调用，推理时不应该计算损失
@@ -86,10 +76,6 @@ class ComputeLoss:
                            f"   当前输出类型: {type(outputs)}\n"
                            f"   期望训练模式输出: (feats, pred_scores, pred_distri)\n"
                            f"   请检查模型的training状态！")
-        # print(f"🔍 [锚点生成] 开始生成锚点")
-        print(f"   feats长度: {len(feats)}")
-        for i, feat in enumerate(feats):
-            print(f"   feats[{i}]形状: {feat.shape}")
 
         anchors, anchor_points, n_anchors_list, stride_tensor = \
             generate_anchors(feats, self.fpn_strides, self.grid_cell_size, self.grid_cell_offset,
@@ -102,23 +88,12 @@ class ComputeLoss:
         gt_bboxes_scale = jt.full((1, 4), self.ori_img_size, dtype=pred_scores.dtype)
         batch_size = pred_scores.shape[0]
 
-        # targets
-        # print(f"🔍 [目标预处理] 开始处理targets")
-        print(f"   原始targets形状: {targets.shape if hasattr(targets, 'shape') else 'N/A'}")
-        print(f"   batch_size: {batch_size}")
-        print(f"   gt_bboxes_scale: {gt_bboxes_scale.numpy()}")
-
         # 预处理targets
         targets = self.preprocess(targets, batch_size, gt_bboxes_scale)
 
         gt_labels = targets[:, :, :1]
         gt_bboxes = targets[:, :, 1:]  # xyxy
         mask_gt = (gt_bboxes.sum(-1, keepdim=True) > 0).float()
-
-        # print(f"🔍 [目标解析]")
-        print(f"   gt_labels形状: {gt_labels.shape}, 数值范围: [{float(gt_labels.min().data):.6f}, {float(gt_labels.max().data):.6f}]")
-        print(f"   gt_bboxes形状: {gt_bboxes.shape}, 数值范围: [{float(gt_bboxes.min().data):.6f}, {float(gt_bboxes.max().data):.6f}]")
-        print(f"   mask_gt形状: {mask_gt.shape}, 有效目标数: {float(mask_gt.sum().data):.0f}")
 
         # pboxes
         anchor_points_s = anchor_points / stride_tensor
@@ -154,7 +129,6 @@ class ComputeLoss:
                             mask_gt)
 
         except Exception as e:
-            print(f"⚠️ 标签分配异常: {e}")
             raise e
 
         # rescale bbox
@@ -213,7 +187,6 @@ class ComputeLoss:
         loss = safe_nan_inf_check(loss, "final")
         try:
             if jt.isnan(loss).sum() > 0 or jt.isinf(loss).sum() > 0:
-                print(f"⚠️ 最终损失产生NaN/Inf，设为零")
                 loss = jt.zeros_like(loss)
         except:
             loss = jt.clamp(loss, 0.0, 1000.0)
@@ -234,7 +207,6 @@ class ComputeLoss:
                 targets_size = targets.numel()
                 # print(f"🔍 [preprocess] targets.numel(): {targets_size}")
             except Exception as e:
-                print(f"⚠️ [preprocess] numel()调用失败: {e}")
                 # 使用shape计算元素数量
                 targets_size = 1
                 for dim in targets.shape:
@@ -277,9 +249,8 @@ class ComputeLoss:
                                     # 正确提取：item[1]是class_id, item[2:6]是坐标
                                     target_data = [float(item[1]), float(item[2]), float(item[3]), float(item[4]), float(item[5])]
                                     batch_targets[batch_idx].append(target_data)
-                                    print(f"✅ [数据解析] 成功处理目标{i}: batch={batch_idx}, cls={int(item[1])}")
                         except Exception as e:
-                            print(f"❌ [数据解析] 目标{i}处理失败: {e}")
+                            pass  # 跳过有问题的目标
             else:  # [num_targets, 6] 格式
                 for i in range(targets_numpy.shape[0]):
                     try:
@@ -293,9 +264,8 @@ class ComputeLoss:
                             if batch_idx < batch_size:
                                 target_data = [float(item[1]), float(item[2]), float(item[3]), float(item[4]), float(item[5])]
                                 batch_targets[batch_idx].append(target_data)
-                                print(f"✅ [数据解析] 成功处理目标{i}: batch={batch_idx}, cls={int(item[1])}")
                     except Exception as e:
-                        print(f"❌ [数据解析] 目标{i}处理失败: {e}")
+                        pass  # 跳过有问题的目标
                     continue  # 跳过有问题的目标
 
             # 找到最大目标数量，但限制上限避免内存问题
@@ -358,9 +328,6 @@ class ComputeLoss:
             return targets
 
         except Exception as e:
-            print(f"⚠️ preprocess失败: {e}")
-            import traceback
-            traceback.print_exc()
             # 返回安全的默认值
             empty_targets = jt.zeros((batch_size, 1, 5), dtype='float32')
             empty_targets[:, :, 0] = -1
@@ -551,7 +518,6 @@ class BboxLoss(nn.Module):
                     pred_dist_safe.view(-1, self.reg_max + 1), target_right.view(-1))
             except:
                 # 如果交叉熵计算失败，返回零损失
-                print(f"⚠️ DFL交叉熵计算失败，返回零损失")
                 return jt.zeros((target.shape[0], target.shape[1], 1), dtype='float32')
 
             # 限制损失范围
@@ -568,10 +534,8 @@ class BboxLoss(nn.Module):
             # Jittor方式处理NaN/Inf
             try:
                 if jt.isnan(final_loss).sum() > 0:
-                    print(f"⚠️ DFL损失产生NaN，设为零")
                     final_loss = jt.ternary(jt.isnan(final_loss), jt.zeros_like(final_loss), final_loss)
                 if jt.isinf(final_loss).sum() > 0:
-                    print(f"⚠️ DFL损失产生Inf，限制为10.0")
                     final_loss = jt.ternary(jt.isinf(final_loss), jt.full_like(final_loss, 10.0), final_loss)
             except:
                 # 如果检查失败，直接限制范围

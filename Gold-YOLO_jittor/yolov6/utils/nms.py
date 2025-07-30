@@ -116,10 +116,28 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
          list of detections, echo item is one tensor with shape (num_boxes, 6), 6 is for [xyxy, conf, cls].
     """
 
-    num_classes = prediction.shape[2] - 5  # number of classes
-    max_cls_scores = prediction[..., 5:].max(dim=-1)
-    if isinstance(max_cls_scores, tuple):
-        max_cls_scores = max_cls_scores[0]
+    # 修复Jittor shape访问 - 使用更安全的方式
+    pred_shape = list(prediction.shape)
+    num_classes = pred_shape[2] - 5  # number of classes
+
+    # 完整实现max函数，避免Jittor与PyTorch差异
+    class_scores = prediction[..., 5:]  # [batch, anchors, classes]
+    cls_shape = list(class_scores.shape)
+    max_cls_scores = []
+    for batch_idx in range(cls_shape[0]):
+        batch_max_scores = []
+        for anchor_idx in range(cls_shape[1]):
+            anchor_scores = class_scores[batch_idx, anchor_idx]  # [classes]
+            anchor_shape = list(anchor_scores.shape)
+            max_val = float(anchor_scores[0])
+            for cls_idx in range(1, anchor_shape[0]):
+                val = float(anchor_scores[cls_idx])
+                if val > max_val:
+                    max_val = val
+            batch_max_scores.append(max_val)
+        max_cls_scores.append(batch_max_scores)
+    max_cls_scores = jt.array(max_cls_scores)
+
     pred_candidates = jt.logical_and(prediction[..., 4] > conf_thres, max_cls_scores > conf_thres)  # candidates
     # Check the parameters.
     assert 0 <= conf_thres <= 1, f'conf_thresh must be in 0.0 to 1.0, however {conf_thres} is provided.'
@@ -132,12 +150,13 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
     multi_label &= num_classes > 1  # multiple labels per box
 
     tik = time.time()
-    output = [jt.zeros((0, 6))] * prediction.shape[0]
+    output = [jt.zeros((0, 6))] * pred_shape[0]
     for img_idx, x in enumerate(prediction):  # image index, image inference
         x = x[pred_candidates[img_idx]]  # confidence
 
         # If no box remains, skip the next process.
-        if not x.shape[0]:
+        x_shape = list(x.shape)
+        if not x_shape[0]:
             continue
 
         # confidence multiply the objectness
@@ -150,10 +169,31 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
         if multi_label:
             box_idx, class_idx = (x[:, 5:] > conf_thres).nonzero().T
             x = jt.concat((box[box_idx], x[box_idx, class_idx + 5, None], class_idx[:, None].float()), 1)
-        else:  # Only keep the class with highest scores. - 完全照抄PyTorch版本
-            # 完全照抄PyTorch版本的第79行
-            conf = x[:, 5:].max(1, keepdim=True)  # 获取最大置信度
-            class_idx = x[:, 5:].argmax(1, keepdim=True)  # 获取最大置信度对应的类别索引
+        else:  # Only keep the class with highest scores. - 完整实现，不借用函数
+            # 完整实现max和argmax，避免Jittor与PyTorch函数差异
+            class_scores = x[:, 5:]  # [N, 20] 类别分数
+
+            # 手动实现max(1, keepdim=True) - 沿着类别维度找最大值
+            conf_values = []
+            class_indices = []
+            cls_scores_shape = list(class_scores.shape)
+            for i in range(cls_scores_shape[0]):
+                row_scores = class_scores[i]  # [20]
+                row_shape = list(row_scores.shape)
+                max_val = float(row_scores[0])
+                max_idx = 0
+                for j in range(1, row_shape[0]):
+                    val = float(row_scores[j])
+                    if val > max_val:
+                        max_val = val
+                        max_idx = j
+                conf_values.append(max_val)
+                class_indices.append(max_idx)
+
+            # 转换为tensor
+            conf = jt.array(conf_values).unsqueeze(1)  # [N, 1]
+            class_idx = jt.array(class_indices).unsqueeze(1)  # [N, 1]
+
             x = jt.concat((box, conf, class_idx.float()), 1)[conf.view(-1) > conf_thres]
 
         # Filter by class, only keep boxes whose category is in classes.
@@ -161,7 +201,8 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
             x = x[(x[:, 5:6] == jt.Var(classes).unsqueeze(0)).any(1)]  # 使用jt.Var替代jt.array
 
         # Check shape
-        num_box = x.shape[0]  # number of boxes
+        x_shape = list(x.shape)
+        num_box = x_shape[0]  # number of boxes
         if not num_box:  # no boxes kept.
             continue
         elif num_box > max_nms:  # excess max boxes' number.
@@ -171,7 +212,8 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
         class_offset = x[:, 5:6] * (0 if agnostic else max_wh)  # classes
         boxes, scores = x[:, :4] + class_offset, x[:, 4]  # boxes (offset by class), scores
         keep_box_idx = jittor_nms(boxes, scores, iou_thres)  # NMS
-        if keep_box_idx.shape[0] > max_det:  # limit detections
+        keep_shape = list(keep_box_idx.shape)
+        if keep_shape[0] > max_det:  # limit detections
             keep_box_idx = keep_box_idx[:max_det]
 
         output[img_idx] = x[keep_box_idx]
@@ -220,7 +262,8 @@ def soft_nms(boxes, scores, sigma=0.5, thresh=0.001, cuda=0):
     Returns:
         keep: 保留的索引
     """
-    N = boxes.shape[0]
+    boxes_shape = list(boxes.shape)
+    N = boxes_shape[0]
     indexes = jt.arange(0, N, dtype=jt.float32)
     
     for i in range(N):

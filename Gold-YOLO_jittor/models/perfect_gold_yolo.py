@@ -226,7 +226,11 @@ class PerfectGoldYOLO(nn.Module):
         # 初始化检测头
         self.stride = self.detect.stride
         self.detect.initialize_biases()
-        
+
+        # 初始化模型权重
+        print(f"🔧 初始化模型权重...")
+        self._initialize_weights()
+
         # 计算参数量
         total_params = sum(p.numel() for p in self.parameters())
         backbone_params = sum(p.numel() for p in self.backbone.parameters())

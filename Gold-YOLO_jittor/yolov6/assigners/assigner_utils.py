@@ -56,21 +56,15 @@ def select_candidates_in_gts(xy_centers, gt_bboxes, eps=1e-9):
 
     Args:
         xy_centers (Tensor): shape(num_total_anchors, 2) - anchor中心点坐标
-        gt_bboxes (Tensor): shape(bs, n_max_boxes, 4) - GT框坐标(中心点格式)
+        gt_bboxes (Tensor): shape(bs, n_max_boxes, 4) - GT框坐标(xyxy格式，已经过preprocess)
     Return:
         (Tensor): shape(bs, n_max_boxes, num_total_anchors)
     """
     n_anchors = xy_centers.size(0)
     bs, n_max_boxes, _ = gt_bboxes.size()
 
-    # 将GT框从中心点格式转换为角点格式
-    gt_bboxes_xyxy = jt.zeros_like(gt_bboxes)
-    gt_bboxes_xyxy[..., 0] = gt_bboxes[..., 0] - gt_bboxes[..., 2] / 2  # x1
-    gt_bboxes_xyxy[..., 1] = gt_bboxes[..., 1] - gt_bboxes[..., 3] / 2  # y1
-    gt_bboxes_xyxy[..., 2] = gt_bboxes[..., 0] + gt_bboxes[..., 2] / 2  # x2
-    gt_bboxes_xyxy[..., 3] = gt_bboxes[..., 1] + gt_bboxes[..., 3] / 2  # y2
-
-    _gt_bboxes = gt_bboxes_xyxy.reshape([-1, 4])
+    # 修复关键错误：gt_bboxes已经是xyxy格式（经过preprocess处理），不需要转换
+    _gt_bboxes = gt_bboxes.reshape([-1, 4])
     xy_centers = xy_centers.unsqueeze(0).repeat(bs * n_max_boxes, 1, 1)
     gt_bboxes_lt = _gt_bboxes[:, 0:2].unsqueeze(1).repeat(1, n_anchors, 1)
     gt_bboxes_rb = _gt_bboxes[:, 2:4].unsqueeze(1).repeat(1, n_anchors, 1)
@@ -98,15 +92,42 @@ def select_highest_overlaps(mask_pos, overlaps, n_max_boxes):
         mask_pos (Tensor): shape(bs, n_max_boxes, num_total_anchors)
     """
     fg_mask = mask_pos.sum(dim=-2)
-    if fg_mask.max() > 1:
+
+    # 完整实现max函数，避免Jittor与PyTorch差异
+    fg_max_val = float(fg_mask[0, 0])
+    for i in range(fg_mask.shape[0]):
+        for j in range(fg_mask.shape[1]):
+            val = float(fg_mask[i, j])
+            if val > fg_max_val:
+                fg_max_val = val
+
+    if fg_max_val > 1:
         mask_multi_gts = (fg_mask.unsqueeze(1) > 1).repeat([1, n_max_boxes, 1])
-        max_overlaps_idx = jt.argmax(overlaps, dim=1)[0]  # 修复Jittor argmax API
+
+        # 完整实现argmax函数，避免Jittor与PyTorch差异
+        max_overlaps_idx = []
+        for batch_idx in range(overlaps.shape[0]):
+            batch_indices = []
+            for anchor_idx in range(overlaps.shape[2]):
+                max_val = float(overlaps[batch_idx, 0, anchor_idx])
+                max_idx = 0
+                for gt_idx in range(1, overlaps.shape[1]):
+                    val = float(overlaps[batch_idx, gt_idx, anchor_idx])
+                    if val > max_val:
+                        max_val = val
+                        max_idx = gt_idx
+                batch_indices.append(max_idx)
+            max_overlaps_idx.append(batch_indices)
+        max_overlaps_idx = jt.array(max_overlaps_idx)
+
         is_max_overlaps = nn.one_hot(max_overlaps_idx, n_max_boxes)
         is_max_overlaps = is_max_overlaps.permute(0, 2, 1).astype(overlaps.dtype)
         mask_pos = jt.where(mask_multi_gts, is_max_overlaps, mask_pos)
         fg_mask = mask_pos.sum(dim=-2)
-    # 修复Jittor argmax API - 使用正确的维度索引
-    target_gt_idx = jt.argmax(mask_pos, dim=1)[0]  # Jittor返回(indices, values)
+    # 修复Jittor argmax的维度问题
+    # mask_pos形状: [bs, n_max_boxes, num_total_anchors]
+    # 需要在dim=-2(即n_max_boxes维度)上找到最大值的索引
+    target_gt_idx = jt.argmax(mask_pos, dim=1)[0]  # dim=1对应n_max_boxes维度
     return target_gt_idx, fg_mask , mask_pos
 
 

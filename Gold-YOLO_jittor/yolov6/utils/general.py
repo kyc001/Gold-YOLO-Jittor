@@ -25,7 +25,13 @@ def check_img_size(img_size, s=32, floor=0):
 def make_divisible(x, divisor):
     """Returns nearest x divisible by divisor"""
     if isinstance(divisor, jt.Var):
-        divisor = int(divisor.max())  # to int
+        # 完整实现max函数，避免Jittor与PyTorch差异
+        max_val = float(divisor[0])
+        for i in range(1, divisor.numel()):
+            val = float(divisor.view(-1)[i])
+            if val > max_val:
+                max_val = val
+        divisor = int(max_val)
     return math.ceil(x / divisor) * divisor
 
 def increment_name(path):
