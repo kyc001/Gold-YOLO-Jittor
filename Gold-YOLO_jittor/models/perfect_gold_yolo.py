@@ -242,7 +242,65 @@ class PerfectGoldYOLO(nn.Module):
         print(f"   Backbone: {backbone_params:,} ({backbone_params/total_params*100:.1f}%)")
         print(f"   Neck: {neck_params:,} ({neck_params/total_params*100:.1f}%)")
         print(f"   Head: {head_params:,} ({head_params/total_params*100:.1f}%)")
-    
+
+    def _initialize_weights(self):
+        """初始化模型权重 - 严格对齐PyTorch版本，特别处理Transformer组件"""
+        import math
+
+        for name, m in self.named_modules():
+            if isinstance(m, jt.nn.Conv2d):
+                # Kaiming初始化 - 对齐PyTorch默认
+                jt.nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                if m.bias is not None:
+                    jt.nn.init.constant_(m.bias, 0)
+            elif isinstance(m, jt.nn.BatchNorm2d):
+                # BatchNorm初始化
+                jt.nn.init.constant_(m.weight, 1)
+                jt.nn.init.constant_(m.bias, 0)
+            elif isinstance(m, jt.nn.Linear):
+                # Linear层初始化 - 对Transformer组件使用更小的初始化
+                if 'transformer' in name.lower() or 'attention' in name.lower() or 'mlp' in name.lower():
+                    # Transformer组件使用Xavier初始化
+                    jt.nn.init.xavier_uniform_(m.weight, gain=0.02)
+                else:
+                    # 普通Linear层
+                    jt.nn.init.normal_(m.weight, 0, 0.01)
+                if m.bias is not None:
+                    jt.nn.init.constant_(m.bias, 0)
+            elif isinstance(m, jt.nn.ConvTranspose2d):
+                # ConvTranspose2d初始化
+                jt.nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                if m.bias is not None:
+                    jt.nn.init.constant_(m.bias, 0)
+
+        # 特别处理RepGDNeck中的Transformer组件
+        self._init_transformer_weights()
+
+        print(f"✅ 权重初始化完成 (包含Transformer组件)")
+
+    def _init_transformer_weights(self):
+        """特别初始化Transformer组件的权重"""
+        # 查找并初始化Transformer相关的权重
+        for name, module in self.named_modules():
+            # 处理Attention模块
+            if hasattr(module, 'qkv') and hasattr(module.qkv, 'weight'):
+                # 注意力机制的qkv权重
+                jt.nn.init.xavier_uniform_(module.qkv.weight, gain=0.02)
+                if hasattr(module.qkv, 'bias') and module.qkv.bias is not None:
+                    jt.nn.init.constant_(module.qkv.bias, 0)
+
+            # 处理MLP模块
+            if hasattr(module, 'fc1') and hasattr(module.fc1, 'weight'):
+                jt.nn.init.xavier_uniform_(module.fc1.weight, gain=0.02)
+            if hasattr(module, 'fc2') and hasattr(module.fc2, 'weight'):
+                jt.nn.init.xavier_uniform_(module.fc2.weight, gain=0.02)
+
+            # 处理LayerNorm类似的归一化层
+            if hasattr(module, 'norm') and hasattr(module.norm, 'weight'):
+                jt.nn.init.constant_(module.norm.weight, 1.0)
+                if hasattr(module.norm, 'bias'):
+                    jt.nn.init.constant_(module.norm.bias, 0)
+
     def execute(self, x):
         """前向传播 - 修复训练/推理一致性"""
         # Backbone特征提取
