@@ -384,8 +384,12 @@ class Trainer:
             # Jittor不需要scaler，直接step
             self.optimizer.step()
             self.optimizer.zero_grad()
+            jt.sync_all()  # 防止内存泄漏
+            jt.gc()        # 垃圾回收
             if self.ema:
                 self.ema.update(self.model)
+                jt.sync_all()  # EMA更新后也需要同步
+                jt.gc()
             self.last_opt_step = curr_step
 
     @staticmethod

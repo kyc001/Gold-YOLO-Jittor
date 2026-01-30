@@ -22,13 +22,28 @@ class ConfigDict(dict):
 
     def __getattr__(self, name):
         try:
-            return self[name]
+            value = self[name]
+            # 递归转换嵌套的字典为ConfigDict
+            if isinstance(value, dict) and not isinstance(value, ConfigDict):
+                value = ConfigDict(value)
+                self[name] = value
+            return value
         except KeyError:
             raise AttributeError("'{}' object has no attribute '{}'".format(
                 self.__class__.__name__, name))
 
     def __setattr__(self, name, value):
+        if isinstance(value, dict) and not isinstance(value, ConfigDict):
+            value = ConfigDict(value)
         self[name] = value
+
+    def __getitem__(self, key):
+        value = super().__getitem__(key)
+        # 递归转换嵌套的字典为ConfigDict
+        if isinstance(value, dict) and not isinstance(value, ConfigDict):
+            value = ConfigDict(value)
+            super().__setitem__(key, value)
+        return value
 
 
 class Config(object):

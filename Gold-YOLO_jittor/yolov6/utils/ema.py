@@ -40,6 +40,10 @@ class ModelEMA:
                 item *= decay
                 item += (1 - decay) * state_dict[k].detach()
 
+        # 防止内存泄漏
+        jt.sync_all()
+        jt.gc()
+
     def update_attr(self, model, include=(), exclude=('process_group', 'reducer')):
         copy_attr(self.ema, model, include, exclude)
 
@@ -89,12 +93,16 @@ class JittorModelEMA:
         """更新EMA权重"""
         self.updates += 1
         d = self.decay_fn()
-        
+
         msd = de_parallel(model).state_dict()  # model state_dict
         for k, v in self.ema.state_dict().items():
             if v.dtype.is_float():
                 v *= d
                 v += (1 - d) * msd[k].detach()
+
+        # 防止内存泄漏
+        jt.sync_all()
+        jt.gc()
     
     def decay_fn(self):
         """计算衰减率"""

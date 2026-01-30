@@ -160,13 +160,21 @@ class Detect(nn.Module):
 
 
 def build_effidehead_layer(channels_list, num_anchors, num_classes, reg_max=16, num_layers=3):
-    """构建EffiDeHead层 - channels_list是head的输入通道列表，如[32, 64, 128]"""
+    """构建EffiDeHead层 - channels_list是完整的backbone+neck通道列表"""
+
+    # 与PyTorch版本对齐：使用正确的索引从channels_list中取head输入通道
+    if num_layers == 3:
+        chx = [6, 8, 10]
+    elif num_layers == 4:
+        chx = [8, 9, 10, 11]
+    else:
+        raise ValueError(f"Unsupported num_layers: {num_layers}")
 
     head_layers = []
 
     # 为每个检测层创建5个模块：stem, cls_conv, reg_conv, cls_pred, reg_pred
     for i in range(num_layers):
-        ch = channels_list[i]  # 当前层的输入通道数
+        ch = channels_list[chx[i]]  # 使用正确的索引
 
         # stem
         head_layers.append(Conv(

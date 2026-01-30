@@ -299,10 +299,70 @@ def concat(tensors, dim=0):
     return jt.concat(tensors, dim=dim)
 
 
+def tile(input, dims):
+    """
+    实现 torch.tile 功能，100%对齐PyTorch版本
+
+    Args:
+        input: 输入张量
+        dims: 每个维度的重复次数
+
+    Returns:
+        重复后的张量
+    """
+    result = input
+    for i, d in enumerate(dims):
+        if d > 1:
+            result = jt.concat([result] * d, dim=i)
+    return result
+
+
+def binary_cross_entropy_with_logits(input, target, weight=None, reduction='mean', pos_weight=None):
+    """
+    实现 F.binary_cross_entropy_with_logits，100%对齐PyTorch版本
+
+    与 binary_cross_entropy 不同，此函数接受 logits（未经 sigmoid 的值）
+
+    Args:
+        input: 预测 logits（未经sigmoid）
+        target: 目标值 [0, 1]
+        weight: 权重
+        reduction: 'none', 'mean', 'sum'
+        pos_weight: 正样本权重
+
+    Returns:
+        损失值
+    """
+    # 数值稳定的实现
+    # loss = max(input, 0) - input * target + log(1 + exp(-abs(input)))
+    max_val = jt.clamp(-input, min_v=0)
+
+    if pos_weight is not None:
+        # 带正样本权重的损失
+        log_weight = (pos_weight - 1) * target + 1
+        loss = (1 - target) * input + log_weight * (jt.log(jt.exp(-max_val) + jt.exp(-input - max_val)) + max_val)
+    else:
+        # 标准 BCE with logits
+        loss = (1 - target) * input + max_val + jt.log(jt.exp(-max_val) + jt.exp(-input - max_val))
+
+    if weight is not None:
+        loss = loss * weight
+
+    if reduction == 'none':
+        return loss
+    elif reduction == 'mean':
+        return loss.mean()
+    elif reduction == 'sum':
+        return loss.sum()
+    else:
+        raise ValueError(f"Invalid reduction: {reduction}")
+
+
 # 导出所有函数，方便导入
 __all__ = [
     'binary_cross_entropy',
-    'cross_entropy_loss', 
+    'binary_cross_entropy_with_logits',
+    'cross_entropy_loss',
     'one_hot',
     'softmax',
     'clamp',
@@ -315,5 +375,6 @@ __all__ = [
     'arange',
     'linspace',
     'cat',
-    'concat'
+    'concat',
+    'tile'
 ]
