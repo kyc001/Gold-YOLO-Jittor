@@ -33,11 +33,17 @@ class Model(nn.Module):
                                                               fuse_ab=fuse_ab, distill_ns=distill_ns)
         
         # Init Detect head
-        self.stride = self.detect.stride
+        # 注意：不要直接赋值 self.stride = self.detect.stride，否则会被注册为参数
+        # 使用 property 访问 self.detect.stride
         self.detect.initialize_biases()
-        
+
         # Init weights
         initialize_weights(self)
+
+    @property
+    def stride(self):
+        """通过 property 访问 stride，避免被注册为参数"""
+        return self.detect.stride
     
     def execute(self, x):
         """Jittor版本的前向传播，使用execute替代forward"""
@@ -54,7 +60,7 @@ class Model(nn.Module):
     def _apply(self, fn):
         """Jittor版本的_apply方法"""
         self = super()._apply(fn)
-        self.detect.stride = fn(self.detect.stride)
+        # stride 现在是 property，不需要也无法直接赋值
         self.detect.grid = list(map(fn, self.detect.grid))
         return self
 
@@ -84,9 +90,10 @@ def build_network(config, channels, num_classes, num_layers, fuse_ab=False, dist
     NECK = get_block(config.model.neck.type)
     HEAD = get_block(config.model.head.type)
 
-    # 获取基础block类型（用于backbone和neck构造）
-    from yolov6.layers.common import RepVGGBlock
-    block = RepVGGBlock
+    # 获取基础block类型（用于backbone和neck构造）- 与PyTorch版本对齐
+    from yolov6.layers.common import get_block as get_training_block
+    training_mode = getattr(config, 'training_mode', 'repvgg')  # 默认使用repvgg
+    block = get_training_block(training_mode)
 
     neck_extra_cfg = getattr(config.model.neck, 'extra_cfg', None)
     

@@ -192,3 +192,30 @@ def bbox_iou(box1, box2, xywh=True, GIoU=False, DIoU=False, CIoU=False, eps=1e-7
         c_area = cw * ch + eps  # convex area
         return iou - (c_area - union) / c_area  # GIoU https://arxiv.org/pdf/1902.09630.pdf
     return iou  # IoU
+
+
+def pairwise_bbox_iou(box1, box2, box_format='xywh'):
+    """Calculate pairwise iou - 严格对齐PyTorch版本
+    This code is based on https://github.com/Megvii-BaseDetection/YOLOX/blob/main/yolox/utils/boxes.py
+    """
+    if box_format == 'xyxy':
+        lt = jt.maximum(box1[:, None, :2], box2[:, :2])
+        rb = jt.minimum(box1[:, None, 2:], box2[:, 2:])
+        area_1 = jt.prod(box1[:, 2:] - box1[:, :2], 1)
+        area_2 = jt.prod(box2[:, 2:] - box2[:, :2], 1)
+
+    elif box_format == 'xywh':
+        lt = jt.maximum(
+            (box1[:, None, :2] - box1[:, None, 2:] / 2),
+            (box2[:, :2] - box2[:, 2:] / 2),
+        )
+        rb = jt.minimum(
+            (box1[:, None, :2] + box1[:, None, 2:] / 2),
+            (box2[:, :2] + box2[:, 2:] / 2),
+        )
+
+        area_1 = jt.prod(box1[:, 2:], 1)
+        area_2 = jt.prod(box2[:, 2:], 1)
+    valid = (lt < rb).astype(lt.dtype).prod(dim=2)
+    inter = jt.prod(rb - lt, 2) * valid
+    return inter / (area_1[:, None] + area_2 - inter)

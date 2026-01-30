@@ -27,8 +27,9 @@ class Detect(nn.Module):
         self.grid = [jt.zeros(1)] * num_layers  # 使用jt.zeros替代torch.zeros
         self.prior_prob = 1e-2
         self.inplace = inplace
-        stride = [8, 16, 32] if num_layers == 3 else [8, 16, 32, 64]  # strides computed during build
-        self.stride = jt.array(stride)  # 使用jt.array替代torch.tensor
+        # 关键修复：在Jittor中，jt.array赋给模块属性会被注册为参数
+        # PyTorch中torch.tensor()不会被注册，所以这里用Python list存储
+        self._stride_list = [8, 16, 32] if num_layers == 3 else [8, 16, 32, 64]
         self.use_dfl = use_dfl
         self.reg_max = reg_max
         # 修复关键错误：与PyTorch版本对齐，总是创建proj_conv层
@@ -51,7 +52,12 @@ class Detect(nn.Module):
             self.reg_convs.append(head_layers[idx + 2])
             self.cls_preds.append(head_layers[idx + 3])
             self.reg_preds.append(head_layers[idx + 4])
-    
+
+    @property
+    def stride(self):
+        """通过property访问stride，避免被注册为参数"""
+        return jt.array(self._stride_list).float32().stop_grad()
+
     def initialize_biases(self):
         """初始化偏置 - 与PyTorch版本完全对齐"""
         for conv in self.cls_preds:

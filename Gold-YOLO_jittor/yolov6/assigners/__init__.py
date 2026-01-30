@@ -3,9 +3,9 @@
 from .anchor_generator import generate_anchors, make_anchors, dist2bbox, bbox2dist
 from .assigner_utils import (
     dist_calculator, select_candidates_in_gts, select_highest_overlaps,
-    iou_calculator, bbox_overlaps
+    iou_calculator
 )
-from .iou2d_calculator import iou2d_calculator, bbox_overlaps as bbox_overlaps_2d
+from .iou2d_calculator import iou2d_calculator, bbox_overlaps, bbox_overlaps as bbox_overlaps_2d
 from .atss_assigner import ATSSAssigner
 
 __all__ = [

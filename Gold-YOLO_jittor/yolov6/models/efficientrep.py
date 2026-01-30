@@ -81,12 +81,12 @@ class EfficientRep(nn.Module):
                         block=block,
                 )
         )
-        
+
+        # 严格对齐PyTorch: 根据block类型选择channel_merge_layer
+        channel_merge_layer = SPPF if block == ConvWrapper else SimSPPF
         if cspsppf:
-            channel_merge_layer = CSPSPPF
-        else:
-            channel_merge_layer = SimSPPF
-        
+            channel_merge_layer = CSPSPPF if block == ConvWrapper else SimCSPSPPF
+
         self.ERBlock_5 = nn.Sequential(
                 block(
                         in_channels=channels_list[3],
@@ -209,14 +209,12 @@ class EfficientRep6(nn.Module):
                         out_channels=channels_list[4],
                         n=num_repeats[4],
                         block=block,
-                ),
-                SimSPPF(
-                        in_channels=channels_list[4],
-                        out_channels=channels_list[4],
-                        kernel_size=5
                 )
         )
-        
+
+        # 严格对齐PyTorch: ERBlock_6才有channel_merge_layer
+        channel_merge_layer = SimSPPF if not cspsppf else SimCSPSPPF
+
         self.ERBlock_6 = nn.Sequential(
                 block(
                         in_channels=channels_list[4],
@@ -230,7 +228,7 @@ class EfficientRep6(nn.Module):
                         n=num_repeats[5],
                         block=block,
                 ),
-                SimSPPF(
+                channel_merge_layer(
                         in_channels=channels_list[5],
                         out_channels=channels_list[5],
                         kernel_size=5
@@ -331,12 +329,12 @@ class CSPBepBackbone(nn.Module):
                         block=block,
                 )
         )
-        
+
+        # 严格对齐PyTorch: 根据block类型选择channel_merge_layer
+        channel_merge_layer = SPPF if block == ConvWrapper else SimSPPF
         if cspsppf:
-            channel_merge_layer = CSPSPPF
-        else:
-            channel_merge_layer = SimSPPF
-        
+            channel_merge_layer = CSPSPPF if block == ConvWrapper else SimCSPSPPF
+
         self.ERBlock_5 = nn.Sequential(
                 block(
                         in_channels=channels_list[3],
@@ -357,7 +355,7 @@ class CSPBepBackbone(nn.Module):
                         kernel_size=5
                 )
         )
-    
+
     def execute(self, x):
         """Jittor版本的前向传播"""
         outputs = []
@@ -371,5 +369,140 @@ class CSPBepBackbone(nn.Module):
         outputs.append(x)
         x = self.ERBlock_5(x)
         outputs.append(x)
-        
+
+        return tuple(outputs)
+
+
+class CSPBepBackbone_P6(nn.Module):
+    """
+    CSPBepBackbone+P6 module - 严格对齐PyTorch版本
+    """
+
+    def __init__(
+            self,
+            in_channels=3,
+            channels_list=None,
+            num_repeats=None,
+            block=RepVGGBlock,
+            csp_e=float(1) / 2,
+            fuse_P2=False,
+            cspsppf=False
+    ):
+        super().__init__()
+        assert channels_list is not None
+        assert num_repeats is not None
+        self.fuse_P2 = fuse_P2
+
+        self.stem = block(
+                in_channels=in_channels,
+                out_channels=channels_list[0],
+                kernel_size=3,
+                stride=2
+        )
+
+        self.ERBlock_2 = nn.Sequential(
+                block(
+                        in_channels=channels_list[0],
+                        out_channels=channels_list[1],
+                        kernel_size=3,
+                        stride=2
+                ),
+                BepC3(
+                        in_channels=channels_list[1],
+                        out_channels=channels_list[1],
+                        n=num_repeats[1],
+                        e=csp_e,
+                        block=block,
+                )
+        )
+
+        self.ERBlock_3 = nn.Sequential(
+                block(
+                        in_channels=channels_list[1],
+                        out_channels=channels_list[2],
+                        kernel_size=3,
+                        stride=2
+                ),
+                BepC3(
+                        in_channels=channels_list[2],
+                        out_channels=channels_list[2],
+                        n=num_repeats[2],
+                        e=csp_e,
+                        block=block,
+                )
+        )
+
+        self.ERBlock_4 = nn.Sequential(
+                block(
+                        in_channels=channels_list[2],
+                        out_channels=channels_list[3],
+                        kernel_size=3,
+                        stride=2
+                ),
+                BepC3(
+                        in_channels=channels_list[3],
+                        out_channels=channels_list[3],
+                        n=num_repeats[3],
+                        e=csp_e,
+                        block=block,
+                )
+        )
+
+        # 严格对齐PyTorch: 根据block类型选择channel_merge_layer
+        channel_merge_layer = SPPF if block == ConvWrapper else SimSPPF
+        if cspsppf:
+            channel_merge_layer = CSPSPPF if block == ConvWrapper else SimCSPSPPF
+
+        self.ERBlock_5 = nn.Sequential(
+                block(
+                        in_channels=channels_list[3],
+                        out_channels=channels_list[4],
+                        kernel_size=3,
+                        stride=2,
+                ),
+                BepC3(
+                        in_channels=channels_list[4],
+                        out_channels=channels_list[4],
+                        n=num_repeats[4],
+                        e=csp_e,
+                        block=block,
+                ),
+        )
+
+        self.ERBlock_6 = nn.Sequential(
+                block(
+                        in_channels=channels_list[4],
+                        out_channels=channels_list[5],
+                        kernel_size=3,
+                        stride=2,
+                ),
+                BepC3(
+                        in_channels=channels_list[5],
+                        out_channels=channels_list[5],
+                        n=num_repeats[5],
+                        e=csp_e,
+                        block=block,
+                ),
+                channel_merge_layer(
+                        in_channels=channels_list[5],
+                        out_channels=channels_list[5],
+                        kernel_size=5
+                )
+        )
+
+    def execute(self, x):
+        """Jittor版本的前向传播"""
+        outputs = []
+        x = self.stem(x)
+        x = self.ERBlock_2(x)
+        outputs.append(x)
+        x = self.ERBlock_3(x)
+        outputs.append(x)
+        x = self.ERBlock_4(x)
+        outputs.append(x)
+        x = self.ERBlock_5(x)
+        outputs.append(x)
+        x = self.ERBlock_6(x)
+        outputs.append(x)
+
         return tuple(outputs)

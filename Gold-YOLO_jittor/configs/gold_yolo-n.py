@@ -20,7 +20,7 @@ model = dict(
         ),
         neck=dict(
                 type='RepGDNeck',
-                num_repeats=[12, 12, 12, 12, 12, 12, 12, 12, 12],  # RepGDNeck需要9个值
+                num_repeats=[12, 12, 12, 12],  # 严格对齐PyTorch：4个值对应索引[5-8]
                 out_channels=[256, 128, 128, 256, 256, 512],
                 extra_cfg=dict(
                         norm_cfg=dict(type='SyncBN', requires_grad=True),

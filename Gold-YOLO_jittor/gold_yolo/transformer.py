@@ -158,7 +158,8 @@ class PyramidPoolAgg(nn.Module):
         super().__init__()
         self.stride = stride
         if pool_mode == 'torch':
-            self.pool = lambda x, size: jt.pool.AdaptiveAvgPool2d(size)(x)
+            # Jittor的AdaptiveAvgPool2d需要tuple/list，不支持numpy.ndarray
+            self.pool = lambda x, size: jt.pool.AdaptiveAvgPool2d((int(size[0]), int(size[1])))(x)
         elif pool_mode == 'onnx':
             self.pool = onnx_AdaptiveAvgPool2d
 
@@ -169,11 +170,9 @@ class PyramidPoolAgg(nn.Module):
 
         output_size = np.array([H, W])
 
+        # 严格对齐PyTorch: 使用__init__中根据pool_mode设置的pool函数
         if not hasattr(self, 'pool'):
-            self.pool = lambda x, size: jt.pool.AdaptiveAvgPool2d(size)(x)
-
-        # Jittor没有ONNX导出检查，直接使用onnx_AdaptiveAvgPool2d
-        self.pool = onnx_AdaptiveAvgPool2d
+            self.pool = lambda x, size: jt.pool.AdaptiveAvgPool2d((int(size[0]), int(size[1])))(x)
 
         out = [self.pool(inp, output_size) for inp in inputs]
 

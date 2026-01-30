@@ -1,15 +1,15 @@
 """
 GOLD-YOLO Jittor版本 - 分配器工具函数
-从PyTorch版本迁移到Jittor框架
+严格对齐PyTorch版本
 """
 
 import jittor as jt
-from jittor import nn
 import jittor.nn as nn
 
 
 def dist_calculator(gt_bboxes, anchor_bboxes):
     """compute center distance between all bbox and gt
+    严格对齐PyTorch版本
 
     Args:
         gt_bboxes (Tensor): shape(bs*n_max_boxes, 4)
@@ -18,14 +18,6 @@ def dist_calculator(gt_bboxes, anchor_bboxes):
         distances (Tensor): shape(bs*n_max_boxes, num_total_anchors)
         ac_points (Tensor): shape(num_total_anchors, 2)
     """
-    # 确保anchor_bboxes是2D的[M, 4]格式
-    if len(anchor_bboxes.shape) != 2 or anchor_bboxes.shape[-1] != 4:
-        # 尝试reshape
-        if anchor_bboxes.numel() % 4 == 0:
-            anchor_bboxes = anchor_bboxes.view(-1, 4)
-        else:
-            raise ValueError(f"anchor_bboxes无法reshape为[M, 4]: {anchor_bboxes.shape}")
-
     gt_cx = (gt_bboxes[:, 0] + gt_bboxes[:, 2]) / 2.0
     gt_cy = (gt_bboxes[:, 1] + gt_bboxes[:, 3]) / 2.0
     gt_points = jt.stack([gt_cx, gt_cy], dim=1)
@@ -33,37 +25,24 @@ def dist_calculator(gt_bboxes, anchor_bboxes):
     ac_cy = (anchor_bboxes[:, 1] + anchor_bboxes[:, 3]) / 2.0
     ac_points = jt.stack([ac_cx, ac_cy], dim=1)
 
-    # 修复形状不匹配问题
-    # gt_points: [N, 2], ac_points: [M, 2]
-    # 需要计算每个GT点到每个anchor点的距离
-
-    N = gt_points.shape[0]
-    M = ac_points.shape[0]
-
-    # 扩展维度进行广播
-    gt_points_exp = gt_points.unsqueeze(1)  # [N, 1, 2]
-    ac_points_exp = ac_points.unsqueeze(0)  # [1, M, 2]
-
-    # 计算距离
-    distances = ((gt_points_exp - ac_points_exp) ** 2).sum(-1).sqrt()  # [N, M]
+    # 严格对齐PyTorch: (gt_points[:, None, :] - ac_points[None, :, :]).pow(2).sum(-1).sqrt()
+    distances = (gt_points[:, None, :] - ac_points[None, :, :]).pow(2).sum(-1).sqrt()
 
     return distances, ac_points
 
 
 def select_candidates_in_gts(xy_centers, gt_bboxes, eps=1e-9):
     """select the positive anchors's center in gt
-    严格对齐PyTorch版本的实现
+    严格对齐PyTorch版本
 
     Args:
-        xy_centers (Tensor): shape(num_total_anchors, 2) - anchor中心点坐标
-        gt_bboxes (Tensor): shape(bs, n_max_boxes, 4) - GT框坐标(xyxy格式，已经过preprocess)
+        xy_centers (Tensor): shape(num_total_anchors, 2)
+        gt_bboxes (Tensor): shape(bs, n_max_boxes, 4)
     Return:
         (Tensor): shape(bs, n_max_boxes, num_total_anchors)
     """
     n_anchors = xy_centers.size(0)
     bs, n_max_boxes, _ = gt_bboxes.size()
-
-    # 修复关键错误：gt_bboxes已经是xyxy格式（经过preprocess处理），不需要转换
     _gt_bboxes = gt_bboxes.reshape([-1, 4])
     xy_centers = xy_centers.unsqueeze(0).repeat(bs * n_max_boxes, 1, 1)
     gt_bboxes_lt = _gt_bboxes[:, 0:2].unsqueeze(1).repeat(1, n_anchors, 1)
@@ -72,16 +51,13 @@ def select_candidates_in_gts(xy_centers, gt_bboxes, eps=1e-9):
     b_rb = gt_bboxes_rb - xy_centers
     bbox_deltas = jt.concat([b_lt, b_rb], dim=-1)
     bbox_deltas = bbox_deltas.reshape([bs, n_max_boxes, n_anchors, -1])
-
-    # 计算在GT内的anchor
-    min_deltas = bbox_deltas.min(dim=-1)[0]
-    result = (min_deltas > eps).astype(gt_bboxes.dtype)
-    return result
+    return (bbox_deltas.min(dim=-1)[0] > eps).astype(gt_bboxes.dtype)
 
 
 def select_highest_overlaps(mask_pos, overlaps, n_max_boxes):
     """if an anchor box is assigned to multiple gts,
         the one with the highest iou will be selected.
+    严格对齐PyTorch版本
 
     Args:
         mask_pos (Tensor): shape(bs, n_max_boxes, num_total_anchors)
@@ -91,63 +67,39 @@ def select_highest_overlaps(mask_pos, overlaps, n_max_boxes):
         fg_mask (Tensor): shape(bs, num_total_anchors)
         mask_pos (Tensor): shape(bs, n_max_boxes, num_total_anchors)
     """
-    fg_mask = mask_pos.sum(dim=-2)
-
-    # 完整实现max函数，避免Jittor与PyTorch差异
-    fg_max_val = float(fg_mask[0, 0])
-    for i in range(fg_mask.shape[0]):
-        for j in range(fg_mask.shape[1]):
-            val = float(fg_mask[i, j])
-            if val > fg_max_val:
-                fg_max_val = val
-
-    if fg_max_val > 1:
+    # 严格对齐PyTorch: fg_mask = mask_pos.sum(axis=-2)
+    # Jittor不支持负数dim，手动转换: dim=-2 对于3D张量等于 dim=1
+    fg_mask = mask_pos.sum(dim=1)
+    if fg_mask.max() > 1:
         mask_multi_gts = (fg_mask.unsqueeze(1) > 1).repeat([1, n_max_boxes, 1])
-
-        # 完整实现argmax函数，避免Jittor与PyTorch差异
-        max_overlaps_idx = []
-        for batch_idx in range(overlaps.shape[0]):
-            batch_indices = []
-            for anchor_idx in range(overlaps.shape[2]):
-                max_val = float(overlaps[batch_idx, 0, anchor_idx])
-                max_idx = 0
-                for gt_idx in range(1, overlaps.shape[1]):
-                    val = float(overlaps[batch_idx, gt_idx, anchor_idx])
-                    if val > max_val:
-                        max_val = val
-                        max_idx = gt_idx
-                batch_indices.append(max_idx)
-            max_overlaps_idx.append(batch_indices)
-        max_overlaps_idx = jt.array(max_overlaps_idx)
-
+        # 严格对齐PyTorch: max_overlaps_idx = overlaps.argmax(axis=1)
+        # Jittor的argmax返回(indices, values)元组，需要取[0]获取索引
+        max_overlaps_idx = overlaps.argmax(dim=1)[0]
         is_max_overlaps = nn.one_hot(max_overlaps_idx, n_max_boxes)
         is_max_overlaps = is_max_overlaps.permute(0, 2, 1).astype(overlaps.dtype)
         mask_pos = jt.where(mask_multi_gts, is_max_overlaps, mask_pos)
-        fg_mask = mask_pos.sum(dim=-2)
-    # 修复Jittor argmax的维度问题
-    # mask_pos形状: [bs, n_max_boxes, num_total_anchors]
-    # 需要在dim=-2(即n_max_boxes维度)上找到最大值的索引
-    target_gt_idx = jt.argmax(mask_pos, dim=1)[0]  # dim=1对应n_max_boxes维度
-    return target_gt_idx, fg_mask , mask_pos
+        fg_mask = mask_pos.sum(dim=1)
+    # 严格对齐PyTorch: target_gt_idx = mask_pos.argmax(axis=-2)
+    # Jittor不支持负数dim，dim=-2 对于3D张量等于 dim=1
+    # Jittor的argmax返回(indices, values)元组，需要取[0]获取索引
+    target_gt_idx = mask_pos.argmax(dim=1)[0]
+    return target_gt_idx, fg_mask, mask_pos
 
 
 def iou_calculator(box1, box2, eps=1e-9):
     """Calculate iou for batch
+    严格对齐PyTorch版本
 
     Args:
-        box1 (Tensor): shape(bs, n_max_boxes, 1, 4) 或 (bs, n_max_boxes, 4)
-        box2 (Tensor): shape(bs, 1, num_total_anchors, 4) 或 (bs, num_total_anchors, 4)
+        box1 (Tensor): shape(bs, n_max_boxes, 4)
+        box2 (Tensor): shape(bs, num_total_anchors, 4)
     Return:
         (Tensor): shape(bs, n_max_boxes, num_total_anchors)
     """
-    # 确保正确的维度 - 如果输入已经有正确维度就不要再unsqueeze
-    if len(box1.shape) == 3:  # [bs, n_max_boxes, 4]
-        box1 = box1.unsqueeze(2)  # -> [bs, n_max_boxes, 1, 4]
-    if len(box2.shape) == 3:  # [bs, num_total_anchors, 4]
-        box2 = box2.unsqueeze(1)  # -> [bs, 1, num_total_anchors, 4]
-    # 修复Jittor 4维切片问题 - 使用split替代切片
-    px1y1, px2y2 = jt.split(box1, [2, 2], dim=-1)
-    gx1y1, gx2y2 = jt.split(box2, [2, 2], dim=-1)
+    box1 = box1.unsqueeze(2)  # [N, M1, 4] -> [N, M1, 1, 4]
+    box2 = box2.unsqueeze(1)  # [N, M2, 4] -> [N, 1, M2, 4]
+    px1y1, px2y2 = box1[:, :, :, 0:2], box1[:, :, :, 2:4]
+    gx1y1, gx2y2 = box2[:, :, :, 0:2], box2[:, :, :, 2:4]
     x1y1 = jt.maximum(px1y1, gx1y1)
     x2y2 = jt.minimum(px2y2, gx2y2)
     overlap = (x2y2 - x1y1).clamp(0).prod(-1)
@@ -156,88 +108,3 @@ def iou_calculator(box1, box2, eps=1e-9):
     union = area1 + area2 - overlap + eps
 
     return overlap / union
-
-
-def bbox_overlaps(bboxes1, bboxes2, mode='iou', is_aligned=False, eps=1e-6):
-    """Calculate overlap between two set of bboxes.
-    
-    Args:
-        bboxes1 (Tensor): shape (B, m, 4) in <x1, y1, x2, y2> format or empty.
-        bboxes2 (Tensor): shape (B, n, 4) in <x1, y1, x2, y2> format or empty.
-        mode (str): "iou" (intersection over union), "iof" (intersection over foreground)
-        is_aligned (bool): If True, then m and n must be equal.
-        eps (float): A value added to the denominator for numerical stability.
-    
-    Returns:
-        Tensor: shape (m, n) if ``is_aligned`` is False else shape (m,)
-    """
-    assert mode in ['iou', 'iof', 'giou'], f'Unsupported mode {mode}'
-    # Either the boxes are empty or the length of boxes' last dimension is 4
-    assert (bboxes1.size(-1) == 4 or bboxes1.size(0) == 0)
-    assert (bboxes2.size(-1) == 4 or bboxes2.size(0) == 0)
-
-    # Batch dim must be the same
-    # Batch dim: (B1, B2, ... Bn)
-    assert bboxes1.shape[:-2] == bboxes2.shape[:-2]
-    batch_shape = bboxes1.shape[:-2]
-
-    rows = bboxes1.size(-2)
-    cols = bboxes2.size(-2)
-    if is_aligned:
-        assert rows == cols
-
-    if rows * cols == 0:
-        if is_aligned:
-            return bboxes1.new(batch_shape + (rows, ))
-        else:
-            return bboxes1.new(batch_shape + (rows, cols))
-
-    area1 = (bboxes1[..., 2] - bboxes1[..., 0]) * (
-        bboxes1[..., 3] - bboxes1[..., 1])
-    area2 = (bboxes2[..., 2] - bboxes2[..., 0]) * (
-        bboxes2[..., 3] - bboxes2[..., 1])
-
-    if is_aligned:
-        lt = jt.maximum(bboxes1[..., :2], bboxes2[..., :2])  # [B, rows, 2]
-        rb = jt.minimum(bboxes1[..., 2:], bboxes2[..., 2:])  # [B, rows, 2]
-
-        wh = jt.maximum(rb - lt, 0)  # [B, rows, 2]
-        overlap = wh[..., 0] * wh[..., 1]
-
-        if mode in ['iou', 'giou']:
-            union = area1 + area2 - overlap
-        else:
-            union = area1
-        if mode == 'giou':
-            enclosed_lt = jt.minimum(bboxes1[..., :2], bboxes2[..., :2])
-            enclosed_rb = jt.maximum(bboxes1[..., 2:], bboxes2[..., 2:])
-    else:
-        lt = jt.maximum(bboxes1[..., :, None, :2],
-                       bboxes2[..., None, :, :2])  # [B, rows, cols, 2]
-        rb = jt.minimum(bboxes1[..., :, None, 2:],
-                       bboxes2[..., None, :, 2:])  # [B, rows, cols, 2]
-
-        wh = jt.maximum(rb - lt, 0)  # [B, rows, cols, 2]
-        overlap = wh[..., 0] * wh[..., 1]
-
-        if mode in ['iou', 'giou']:
-            union = area1[..., :, None] + area2[..., None, :] - overlap
-        else:
-            union = area1[..., :, None]
-        if mode == 'giou':
-            enclosed_lt = jt.minimum(bboxes1[..., :, None, :2],
-                                    bboxes2[..., None, :, :2])
-            enclosed_rb = jt.maximum(bboxes1[..., :, None, 2:],
-                                    bboxes2[..., None, :, 2:])
-
-    eps = union.new_tensor([eps])
-    union = jt.maximum(union, eps)
-    ious = overlap / union
-    if mode in ['iou', 'iof']:
-        return ious
-    # calculate gious
-    enclose_wh = jt.maximum(enclosed_rb - enclosed_lt, 0)
-    enclose_area = enclose_wh[..., 0] * enclose_wh[..., 1]
-    enclose_area = jt.maximum(enclose_area, eps)
-    gious = ious - (enclose_area - union) / enclose_area
-    return gious

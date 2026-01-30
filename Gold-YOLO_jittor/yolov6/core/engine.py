@@ -429,3 +429,184 @@ class Trainer:
             targets = targets.float32()  # 确保targets也是float32
 
         return images, targets
+
+    def get_model(self, args, cfg, nc, device):
+        """获取模型 - 严格对齐PyTorch版本"""
+        model = build_model(cfg, nc, device, fuse_ab=self.args.fuse_ab, distill_ns=self.distill_ns)
+        weights = cfg.model.pretrained
+        if weights:  # finetune if pretrained model is set
+            LOGGER.info(f'Loading state_dict from {weights} for fine-tuning...')
+            model = load_state_dict(weights, model)
+
+        LOGGER.info('Model: {}'.format(model))
+        return model
+
+    def get_teacher_model(self, args, cfg, nc, device):
+        """获取教师模型 - 严格对齐PyTorch版本"""
+        teacher_fuse_ab = False if cfg.model.head.num_layers != 3 else True
+        model = build_model(cfg, nc, device, fuse_ab=teacher_fuse_ab)
+        weights = args.teacher_model_path
+        if weights:  # finetune if pretrained model is set
+            LOGGER.info(f'Loading state_dict from {weights} for teacher')
+            model = load_state_dict(weights, model)
+        LOGGER.info('Model: {}'.format(model))
+        # Do not update running means and running vars
+        for module in model.modules():
+            if isinstance(module, nn.BatchNorm2d):
+                module.track_running_stats = False
+        return model
+
+    @staticmethod
+    def load_scale_from_pretrained_models(cfg, device):
+        """从预训练模型加载scale - 严格对齐PyTorch版本"""
+        weights = cfg.model.scales
+        scales = None
+        if not weights:
+            LOGGER.error("ERROR: No scales provided to init RepOptimizer!")
+        else:
+            ckpt = jt.load(weights)
+            scales = extract_scales(ckpt)
+        return scales
+
+    @staticmethod
+    def parallel_model(args, model, device):
+        """并行模型 - Jittor版本简化（Jittor自动处理并行）"""
+        # Jittor自动处理多GPU并行，不需要手动DDP
+        return model
+
+    def get_optimizer(self, args, cfg, model):
+        """获取优化器 - 严格对齐PyTorch版本"""
+        accumulate = max(1, round(64 / args.batch_size))
+        cfg.solver.weight_decay *= args.batch_size * accumulate / 64
+        cfg.solver.lr0 *= args.batch_size / (self.world_size * args.bs_per_gpu)  # rescale lr0 related to batchsize
+        optimizer = build_optimizer(cfg, model)
+        return optimizer
+
+    @staticmethod
+    def get_lr_scheduler(args, cfg, optimizer):
+        """获取学习率调度器 - 严格对齐PyTorch版本"""
+        epochs = args.epochs
+        lr_scheduler, lf = build_lr_scheduler(cfg, optimizer, epochs)
+        return lr_scheduler, lf
+
+    def plot_train_batch(self, images, targets, max_size=1920, max_subplots=16):
+        """绘制训练batch - 严格对齐PyTorch版本"""
+        # Plot train_batch with labels
+        if hasattr(images, 'numpy'):
+            images = images.numpy()
+        if hasattr(targets, 'numpy'):
+            targets = targets.numpy()
+        if np.max(images[0]) <= 1:
+            images *= 255  # de-normalise (optional)
+        bs, _, h, w = images.shape  # batch size, _, height, width
+        bs = min(bs, max_subplots)  # limit plot images
+        ns = np.ceil(bs ** 0.5)  # number of subplots (square)
+        paths = self.batch_data[2]  # image paths
+        # Build Image
+        mosaic = np.full((int(ns * h), int(ns * w), 3), 255, dtype=np.uint8)  # init
+        for i, im in enumerate(images):
+            if i == max_subplots:  # if last batch has fewer images than we expect
+                break
+            x, y = int(w * (i // ns)), int(h * (i % ns))  # block origin
+            im = im.transpose(1, 2, 0)
+            mosaic[y:y + h, x:x + w, :] = im
+        # Resize (optional)
+        scale = max_size / ns / max(h, w)
+        if scale < 1:
+            h = math.ceil(scale * h)
+            w = math.ceil(scale * w)
+            mosaic = cv2.resize(mosaic, tuple(int(x * ns) for x in (w, h)))
+        for i in range(bs):
+            x, y = int(w * (i // ns)), int(h * (i % ns))  # block origin
+            cv2.rectangle(mosaic, (x, y), (x + w, y + h), (255, 255, 255), thickness=2)  # borders
+            cv2.putText(mosaic, f"{os.path.basename(paths[i])[:40]}", (x + 5, y + 15),
+                        cv2.FONT_HERSHEY_COMPLEX, 0.5, color=(220, 220, 220), thickness=1)  # filename
+            if len(targets) > 0:
+                ti = targets[targets[:, 0] == i]  # image targets
+                boxes = xywh2xyxy(ti[:, 2:6]).T
+                classes = ti[:, 1].astype('int')
+                labels = ti.shape[1] == 6  # labels if no conf column
+                if boxes.shape[1]:
+                    if boxes.max() <= 1.01:  # if normalized with tolerance 0.01
+                        boxes[[0, 2]] *= w  # scale to pixels
+                        boxes[[1, 3]] *= h
+                    elif scale < 1:  # absolute coords need scale if image scales
+                        boxes *= scale
+                boxes[[0, 2]] += x
+                boxes[[1, 3]] += y
+                for j, box in enumerate(boxes.T.tolist()):
+                    box = [int(k) for k in box]
+                    cls = classes[j]
+                    color = tuple([int(x) for x in self.color[cls]])
+                    cls = self.data_dict['names'][cls] if self.data_dict['names'] else cls
+                    if labels:
+                        label = f'{cls}'
+                        cv2.rectangle(mosaic, (box[0], box[1]), (box[2], box[3]), color, thickness=1)
+                        cv2.putText(mosaic, label, (box[0], box[1] - 5), cv2.FONT_HERSHEY_COMPLEX, 0.5, color,
+                                    thickness=1)
+        self.vis_train_batch = mosaic.copy()
+
+    def plot_val_pred(self, vis_outputs, vis_paths, vis_conf=0.3, vis_max_box_num=5):
+        """绘制验证预测 - 严格对齐PyTorch版本"""
+        # plot validation predictions
+        self.vis_imgs_list = []
+        for (vis_output, vis_path) in zip(vis_outputs, vis_paths):
+            if hasattr(vis_output, 'numpy'):
+                vis_output_array = vis_output.numpy()  # xyxy
+            else:
+                vis_output_array = vis_output
+            ori_img = cv2.imread(vis_path)
+            for bbox_idx, vis_bbox in enumerate(vis_output_array):
+                x_tl = int(vis_bbox[0])
+                y_tl = int(vis_bbox[1])
+                x_br = int(vis_bbox[2])
+                y_br = int(vis_bbox[3])
+                box_score = vis_bbox[4]
+                cls_id = int(vis_bbox[5])
+                # draw top n bbox
+                if box_score < vis_conf or bbox_idx > vis_max_box_num:
+                    break
+                cv2.rectangle(ori_img, (x_tl, y_tl), (x_br, y_br), tuple([int(x) for x in self.color[cls_id]]),
+                              thickness=1)
+                cv2.putText(ori_img, f"{self.data_dict['names'][cls_id]}: {box_score:.2f}", (x_tl, y_tl - 10),
+                            cv2.FONT_HERSHEY_COMPLEX, 0.5, tuple([int(x) for x in self.color[cls_id]]), thickness=1)
+            self.vis_imgs_list.append(jt.array(ori_img[:, :, ::-1].copy()))
+
+    # PTQ
+    def calibrate(self, cfg):
+        """PTQ校准 - 严格对齐PyTorch版本"""
+        def save_calib_model(model, cfg):
+            # Save calibrated checkpoint
+            output_model_path = os.path.join(cfg.ptq.calib_output_path, '{}_calib_{}.pt'.
+                                             format(os.path.splitext(os.path.basename(cfg.model.pretrained))[0],
+                                                    cfg.ptq.calib_method))
+            if cfg.ptq.sensitive_layers_skip is True:
+                output_model_path = output_model_path.replace('.pt', '_partial.pt')
+            LOGGER.info('Saving calibrated model to {}... '.format(output_model_path))
+            if not os.path.exists(cfg.ptq.calib_output_path):
+                os.mkdir(cfg.ptq.calib_output_path)
+            jt.save({'model': deepcopy(de_parallel(model)).half()}, output_model_path)
+
+        assert self.args.quant is True and self.args.calib is True
+        if self.main_process:
+            from tools.qat.qat_utils import ptq_calibrate
+            ptq_calibrate(self.model, self.train_loader, cfg)
+            self.epoch = 0
+            self.eval_model()
+            save_calib_model(self.model, cfg)
+
+    # QAT
+    def quant_setup(self, model, cfg, device):
+        """QAT设置 - 严格对齐PyTorch版本"""
+        if self.args.quant:
+            from tools.qat.qat_utils import qat_init_model_manu, skip_sensitive_layers
+            qat_init_model_manu(model, cfg, self.args)
+            # workaround
+            model.neck.upsample_enable_quant(cfg.ptq.num_bits, cfg.ptq.calib_method)
+            # QAT
+            if self.args.calib is False:
+                if cfg.qat.sensitive_layers_skip:
+                    skip_sensitive_layers(model, cfg.qat.sensitive_layers_list)
+                # QAT flow load calibrated model
+                assert cfg.qat.calib_pt is not None, 'Please provide calibrated model'
+                model.load_state_dict(jt.load(cfg.qat.calib_pt)['model'].float().state_dict())

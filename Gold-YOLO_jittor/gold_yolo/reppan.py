@@ -42,7 +42,7 @@ class RepGDNeck(nn.Module):
                 stride=1
         )
         self.LAF_p4 = SimFusion_3in(
-                in_channel_list=[channels_list[2], channels_list[3], channels_list[5]],  # c3, c4, c5_half的通道数
+                in_channel_list=[channels_list[3], channels_list[3]],  # 与 PyTorch 对齐：只传 x1 的输入通道
                 out_channels=channels_list[5],  # 256
         )
         self.Inject_p4 = InjectionMultiSum_Auto_pool(
@@ -66,7 +66,7 @@ class RepGDNeck(nn.Module):
                 stride=1
         )
         self.LAF_p3 = SimFusion_3in(
-                in_channel_list=[channels_list[1], channels_list[2], channels_list[6]],  # c2, c3, p4_half的通道数
+                in_channel_list=[channels_list[5], channels_list[5]],  # 与 PyTorch 对齐：只传 x1 的输入通道
                 out_channels=channels_list[6],  # 256
         )
         self.Inject_p3 = InjectionMultiSum_Auto_pool(
@@ -206,7 +206,7 @@ class GDNeck(nn.Module):
                 stride=1
         )
         self.LAF_p4 = SimFusion_3in(
-                in_channel_list=[channels_list[2], channels_list[3], channels_list[5]],  # c3, c4, c5_half的通道数
+                in_channel_list=[channels_list[3], channels_list[3]],  # 与 PyTorch 对齐：只传 x1 的输入通道
                 out_channels=channels_list[5],  # 256
         )
         self.Inject_p4 = inj_block(
@@ -231,7 +231,7 @@ class GDNeck(nn.Module):
                 stride=1
         )
         self.LAF_p3 = SimFusion_3in(
-                in_channel_list=[channels_list[1], channels_list[2], channels_list[6]],  # c2, c3, p4_half的通道数
+                in_channel_list=[channels_list[5], channels_list[5]],  # 与 PyTorch 对齐：只传 x1 的输入通道
                 out_channels=channels_list[6],  # 256
         )
         self.Inject_p3 = inj_block(

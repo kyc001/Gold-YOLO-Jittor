@@ -26,17 +26,8 @@ class AdvPoolFusion(nn.Module):
 class SimFusion_3in(nn.Module):
     def __init__(self, in_channel_list, out_channels):
         super().__init__()
-        # 为每个输入创建转换层，确保输出通道数一致
-        # in_channel_list应该有3个元素，对应3个输入
-        if len(in_channel_list) == 2:
-            # 兼容旧的配置格式，假设前两个输入通道数相同
-            in_channels = [in_channel_list[0], in_channel_list[0], in_channel_list[1]]
-        else:
-            in_channels = in_channel_list
-
-        self.cv0 = SimConv(in_channels[0], out_channels, 1, 1)  # 处理x[0]
-        self.cv1 = SimConv(in_channels[1], out_channels, 1, 1)  # 处理x[1]
-        self.cv2 = SimConv(in_channels[2], out_channels, 1, 1)  # 处理x[2]
+        # 与 PyTorch 版本对齐：只有 cv1 和 cv_fuse
+        self.cv1 = SimConv(in_channel_list[0], out_channels, 1, 1)
         self.cv_fuse = SimConv(out_channels * 3, out_channels, 1, 1)
         self.downsample = lambda x, size: jt.pool.AdaptiveAvgPool2d(size)(x)
 
@@ -44,14 +35,10 @@ class SimFusion_3in(nn.Module):
         N, C, H, W = x[1].shape
         output_size = (H, W)
 
-        # 处理三个输入，确保它们都有相同的通道数
+        # 与 PyTorch 版本对齐：x0 和 x2 不需要单独的卷积层
         x0 = self.downsample(x[0], output_size)
-        x0 = self.cv0(x0)  # 转换通道数
-
-        x1 = self.cv1(x[1])  # 转换通道数
-
+        x1 = self.cv1(x[1])
         x2 = nn.interpolate(x[2], size=(H, W), mode='bilinear', align_corners=False)
-        x2 = self.cv2(x2)  # 转换通道数
 
         return self.cv_fuse(jt.concat((x0, x1, x2), dim=1))
 
