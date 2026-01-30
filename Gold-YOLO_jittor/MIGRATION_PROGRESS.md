@@ -4,7 +4,14 @@
 
 本文档记录 Gold-YOLO 从 PyTorch 到 Jittor 框架的迁移进度和测试状态。
 
-**当前状态**: ✅ 全部对齐完成
+**当前状态**: ✅ 代码迁移完成，⚠️ 存在 Jittor cuDNN 兼容性问题
+
+**迁移完成度**:
+- 代码对齐: 100% ✅
+- 参数量对齐: 100% (5,631,550) ✅
+- 前向传播: 100% ✅
+- Loss 计算: 100% ✅
+- 反向传播: ⚠️ Jittor 1.3.10 cuDNN 问题（非代码问题）
 
 ---
 
@@ -117,9 +124,34 @@
 14. **Figure IoU 补全** (`yolov6/utils/figure_iou.py`)
     - ✅ 添加 `pairwise_bbox_iou()` 函数
 
+### 2025-01-30 第四批修复（Jittor API 对齐）
+
+15. **Assigner Utils 修复** (`yolov6/assigners/assigner_utils.py`)
+    - ✅ 修复 Jittor 的 `argmax(dim=...)` 返回 `(indices, values)` 元组问题
+    - ✅ 需要使用 `argmax(...)[0]` 获取索引，而非直接使用返回值
+    - ✅ 修复位置: 第76行和第84行
+
+16. **Transformer 修复** (`gold_yolo/transformer.py`)
+    - ✅ 修复 `AdaptiveAvgPool2d` 不支持 numpy.ndarray 输入
+    - ✅ 将 numpy array 转换为 tuple: `(int(size[0]), int(size[1]))`
+
+17. **Import 修复** (`yolov6/assigners/__init__.py`)
+    - ✅ 修复 `bbox_overlaps` 导入路径（从 `iou2d_calculator` 而非 `assigner_utils`）
+
 ---
 
 ## 测试结果
+
+### 完整测试套件 (2025-01-30)
+
+| 测试项 | 状态 | 说明 |
+|--------|------|------|
+| 1. 模块导入 | ✅ | 12个核心模块全部导入成功 |
+| 2. 模型构建 | ✅ | Gold-YOLO-n 构建成功，use_dfl=False |
+| 3. 前向传播 | ✅ | 输出 shapes 正确: feats, pred_scores, pred_distri |
+| 4. Loss 计算 | ✅ | warmup_assigner + tal_assigner 正常工作 |
+| 5. 推理模式 | ✅ | 输出 shape [1,8400,85] 正确 |
+| 6. 参数量验证 | ✅ | 5,631,550 与 PyTorch 完全一致 |
 
 ### 参数量验证 ✅
 
@@ -140,9 +172,26 @@ Match: True
 - 推理模式输出正常 ✓
 - 训练模式输出正常 ✓
 
+### Loss 计算测试 ✅
+
+- Loss 前向计算正常 ✓
+- warmup_assigner (ATSS) 正常 ✓
+- tal_assigner 正常 ✓
+- iou_loss + cls_loss 计算正确 ✓
+
 ### 训练测试
 
-**状态**: ✅ 可以开始训练测试（所有对齐问题已修复）
+**状态**: ⚠️ 反向传播存在 Jittor cuDNN 问题
+
+反向传播时 `cudnn_conv_backward_x` 出现 `float64/float32` 混合精度错误。
+所有模型参数、输出、梯度均为 float32，但 Jittor 内部 cuDNN 调用生成了 float64 的算子。
+
+**错误**: `undefined symbol: _ZN6jittor11getDataTypeIdEE15cudnnDataType_tv`
+
+**可能的解决方案**:
+1. 升级 Jittor 版本（当前 1.3.10 可能存在 cuDNN 兼容性问题）
+2. 使用 `jt.grad()` 手动计算梯度，避免 `optimizer.backward()`
+3. 清理 Jittor 编译缓存：`rm -rf ~/.cache/jittor/`
 
 ---
 
@@ -152,7 +201,7 @@ Match: True
 |------|----------|
 | `yolov6/models/losses/loss.py` | 完全重写 Loss 函数 |
 | `yolov6/assigners/tal_assigner.py` | 完全重写 Assigner |
-| `yolov6/assigners/assigner_utils.py` | 完全重写工具函数 |
+| `yolov6/assigners/assigner_utils.py` | 完全重写工具函数，修复 argmax 返回值 |
 | `yolov6/layers/common.py` | 添加缺失类和融合方法 |
 | `yolov6/models/efficientrep.py` | 添加 P6 类，修复逻辑 |
 | `yolov6/models/effidehead.py` | 修复 stride 参数注册 |
