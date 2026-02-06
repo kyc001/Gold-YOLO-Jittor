@@ -100,9 +100,11 @@ def get_model_info(model, img_size=640):
         if isinstance(img_size, int):
             img_size = [img_size, img_size]
         
-        # 计算参数数量
-        n_p = sum(x.numel() for x in model.parameters())  # number parameters
-        n_g = sum(x.numel() for x in model.parameters() if len(x.shape) > 1)  # number gradients
+        # Keep parity with PyTorch counting: exclude BN running stats from "parameters".
+        named_params = list(model.named_parameters())
+        trainable_params = [(name, p) for name, p in named_params if 'running_mean' not in name and 'running_var' not in name]
+        n_p = sum(int(p.numel()) for _, p in trainable_params)
+        n_g = sum(int(p.numel()) for _, p in trainable_params if len(p.shape) > 1)
         
         # 尝试计算FLOPs
         try:
@@ -121,11 +123,13 @@ def get_model_info(model, img_size=640):
 
 def model_info(model, verbose=False, img_size=640):
     """Model information. img_size may be int or list, i.e. img_size=640 or img_size=[640, 320]"""
-    n_p = sum(x.numel() for x in model.parameters())  # number parameters
-    n_g = sum(x.numel() for x in model.parameters() if len(x.shape) > 1)  # number gradients
+    named_params = list(model.named_parameters())
+    trainable_params = [(name, p) for name, p in named_params if 'running_mean' not in name and 'running_var' not in name]
+    n_p = sum(int(p.numel()) for _, p in trainable_params)
+    n_g = sum(int(p.numel()) for _, p in trainable_params if len(p.shape) > 1)
     if verbose:
         print(f"{'layer':>5} {'name':>40} {'gradient':>9} {'parameters':>12} {'shape':>20} {'mu':>10} {'sigma':>10}")
-        for i, (name, p) in enumerate(model.named_parameters()):
+        for i, (name, p) in enumerate(named_params):
             name = name.replace('module_list.', '')
             print('%5g %40s %9s %12g %20s %10.3g %10.3g' %
                   (i, name, p.requires_grad, p.numel(), list(p.shape), p.mean(), p.std()))

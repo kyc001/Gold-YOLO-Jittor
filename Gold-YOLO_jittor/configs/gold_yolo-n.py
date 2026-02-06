@@ -2,15 +2,11 @@
 #            Huawei Technologies Co., Ltd. <foss@huawei.com>
 # GoldYOLO-n model
 
-# 数据配置
-nc = 20  # VOC数据集类别数
-
 model = dict(
         type='GoldYOLO-n',
         pretrained=None,
         depth_multiple=0.33,
         width_multiple=0.25,
-        nc=nc,  # 添加类别数配置
         backbone=dict(
                 type='EfficientRep',
                 num_repeats=[1, 6, 12, 18, 6],
@@ -20,7 +16,7 @@ model = dict(
         ),
         neck=dict(
                 type='RepGDNeck',
-                num_repeats=[12, 12, 12, 12],  # 严格对齐PyTorch：4个值对应索引[5-8]
+                num_repeats=[12, 12, 12, 12],
                 out_channels=[256, 128, 128, 256, 256, 512],
                 extra_cfg=dict(
                         norm_cfg=dict(type='SyncBN', requires_grad=True),
@@ -53,8 +49,8 @@ model = dict(
                 strides=[8, 16, 32],
                 atss_warmup_epoch=0,
                 iou_type='siou',
-                use_dfl=False,  # 100%对齐PyTorch版本：禁用DFL
-                reg_max=0,      # 100%对齐PyTorch版本：reg_max=0
+                use_dfl=False,  # set to True if you want to further train with distillation
+                reg_max=0,  # set to 16 if you want to further train with distillation
                 distill_weight={
                     'class': 1.0,
                     'dfl'  : 1.0,
@@ -92,4 +88,4 @@ data_aug = dict(
 training_mode = "conv_silu"
 
 # 数据配置
-data_path = "./data/voc_gold_yolo_jittor.yaml"
+data_path = "./data/coco.yaml"

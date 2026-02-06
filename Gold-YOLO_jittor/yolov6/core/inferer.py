@@ -75,6 +75,7 @@ class Inferer:
         ''' Model Inference and results visualization '''
         vid_path, vid_writer, windows = None, None, []
         fps_calculator = CalcFPS()
+        os.makedirs(save_dir, exist_ok=True)
         for img_src, img_path, vid_cap in tqdm(self.files):
             img, img_src = self.precess_image(img_src, self.img_size, self.stride, self.half)
             # Jittor自动处理设备转换
@@ -121,7 +122,7 @@ class Inferer:
                 for *xyxy, conf, cls in reversed(det):
                     if save_txt:  # Write to file
                         xywh = (self.box_convert(jt.array(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                        line = (cls, *xywh, conf) if self.save_conf else (cls, *xywh)  # label format
+                        line = (cls, *xywh, conf)
                         with open(txt_path + '.txt', 'a') as f:
                             f.write(('%g ' * len(line)).rstrip() % line + '\n')
                     
@@ -132,31 +133,45 @@ class Inferer:
                                                 color=self.generate_colors(c, True))
                 
                 img_src = np.asarray(img_ori)
+
+            if self.files.type == 'video':
+                self.draw_text(
+                        img_src,
+                        f"FPS: {avg_fps:0.1f}",
+                        pos=(20, 20),
+                        font_scale=1.0,
+                        text_color=(204, 85, 17),
+                        text_color_bg=(255, 255, 255),
+                        font_thickness=2,
+                )
             
             # Stream results
             if view_img:
-                if self.webcam:
-                    cv2.imshow(str(self.webcam_addr), img_src)
-                    cv2.waitKey(1)  # 1 millisecond
-                else:
-                    cv2.imshow(str(img_path), img_src)
-                    cv2.waitKey(1)  # 1 millisecond
+                if img_path not in windows:
+                    windows.append(img_path)
+                    cv2.namedWindow(str(img_path), cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
+                    cv2.resizeWindow(str(img_path), img_src.shape[1], img_src.shape[0])
+                cv2.imshow(str(img_path), img_src)
+                cv2.waitKey(1)
             
             # Save results (image with detections)
             if save_img:
-                if vid_path != save_path:  # new video
-                    vid_path = save_path
-                    if isinstance(vid_writer, cv2.VideoWriter):
-                        vid_writer.release()  # release previous video writer
-                    if vid_cap:  # video
-                        fps = vid_cap.get(cv2.CAP_PROP_FPS)
-                        w = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                        h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                    else:  # stream
-                        fps, w, h = 30, img_ori.shape[1], img_ori.shape[0]
-                        save_path += '.mp4'
-                    vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
-                vid_writer.write(img_src)
+                if self.files.type == 'image':
+                    cv2.imwrite(save_path, img_src)
+                else:
+                    if vid_path != save_path:  # new video
+                        vid_path = save_path
+                        if isinstance(vid_writer, cv2.VideoWriter):
+                            vid_writer.release()
+                        if vid_cap:  # video
+                            fps = vid_cap.get(cv2.CAP_PROP_FPS)
+                            w = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                            h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                        else:  # stream
+                            fps, w, h = 30, img_ori.shape[1], img_ori.shape[0]
+                        save_path = str(Path(save_path).with_suffix('.mp4'))
+                        vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
+                    vid_writer.write(img_src)
             
             # Print time (inference + NMS)
             LOGGER.info(f'Done. ({(1E3 * (t2 - t1)):.1f}ms) Inference, ({avg_fps:.1f} FPS)')
@@ -211,9 +226,39 @@ class Inferer:
         if not osp.exists(font):
             return ImageFont.load_default()
         try:
-            return ImageFont.truetype(str(font) if font.exists() else font.name, size)
+            return ImageFont.truetype(str(font), size)
         except Exception:
             return ImageFont.load_default()
+
+    @staticmethod
+    def draw_text(
+            img,
+            text,
+            font=cv2.FONT_HERSHEY_SIMPLEX,
+            pos=(0, 0),
+            font_scale=1,
+            font_thickness=2,
+            text_color=(0, 255, 0),
+            text_color_bg=(0, 0, 0),
+    ):
+        offset = (5, 5)
+        x, y = pos
+        text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness)
+        text_w, text_h = text_size
+        rec_start = tuple(x - y for x, y in zip(pos, offset))
+        rec_end = tuple(x + y for x, y in zip((x + text_w, y + text_h), offset))
+        cv2.rectangle(img, rec_start, rec_end, text_color_bg, -1)
+        cv2.putText(
+                img,
+                text,
+                (x, int(y + text_h + font_scale - 1)),
+                font,
+                font_scale,
+                text_color,
+                font_thickness,
+                cv2.LINE_AA,
+        )
+        return text_size
     
     @staticmethod
     def box_convert(x):

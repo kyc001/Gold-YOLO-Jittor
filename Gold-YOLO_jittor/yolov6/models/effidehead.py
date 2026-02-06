@@ -59,39 +59,22 @@ class Detect(nn.Module):
         return jt.array(self._stride_list).float32().stop_grad()
 
     def initialize_biases(self):
-        """初始化偏置 - 与PyTorch版本完全对齐"""
+        """Initialize cls/reg heads and DFL projection exactly like PyTorch."""
+        bias_value = -math.log((1 - self.prior_prob) / self.prior_prob)
         for conv in self.cls_preds:
-            # 与PyTorch版本对齐的初始化
-            bias_value = -math.log((1 - self.prior_prob) / self.prior_prob)
-            conv.bias.data = jt.full_like(conv.bias.data, bias_value)
-            # 修复关键错误：不要将权重设为0！使用正常的随机初始化
-            # conv.weight.data = jt.zeros_like(conv.weight.data)  # 这是错误的！
+            conv.bias.assign(jt.full_like(conv.bias, bias_value))
+            conv.weight.assign(jt.zeros_like(conv.weight))
 
         for conv in self.reg_preds:
-            # 与PyTorch版本对齐的初始化
-            conv.bias.data = jt.ones_like(conv.bias.data)
-            # 修复关键错误：不要将权重设为0！使用正常的随机初始化
-            # conv.weight.data = jt.zeros_like(conv.weight.data)  # 这是错误的！
+            conv.bias.assign(jt.ones_like(conv.bias))
+            conv.weight.assign(jt.zeros_like(conv.weight))
 
-        # 修复关键错误：与PyTorch版本对齐，总是初始化proj_conv
-        # 严格对齐PyTorch版本：proj和proj_conv.weight都不需要梯度
         self.proj = jt.linspace(0, self.reg_max, self.reg_max + 1)
-        self.proj.requires_grad = False  # 关键修复：不需要梯度
-
-        # Jittor的权重赋值方式 - 修复数据类型不匹配问题
+        self.proj.stop_grad()
         proj_weight = self.proj.view([1, self.reg_max + 1, 1, 1]).clone().detach()
-        # 确保数据类型匹配
         proj_weight = proj_weight.astype(self.proj_conv.weight.dtype)
-        self.proj_conv.weight.assign(proj_weight)  # 使用assign方法
-        self.proj_conv.weight.requires_grad = False  # 关键修复：不需要梯度
-
-        print(f"🔧 EffiDeHead初始化完成:")
-        print(f"   use_dfl: {self.use_dfl}")
-        print(f"   reg_max: {self.reg_max}")
-        print(f"   proj形状: {self.proj.shape}")
-        print(f"   proj_conv权重形状: {self.proj_conv.weight.shape}")
-        print(f"   proj需要梯度: {self.proj.requires_grad}")
-        print(f"   proj_conv权重需要梯度: {self.proj_conv.weight.requires_grad}")
+        self.proj_conv.weight.assign(proj_weight)
+        self.proj_conv.weight.stop_grad()
     
     def execute(self, x):
         """Jittor版本的前向传播"""
@@ -213,16 +196,9 @@ def build_effidehead_layer(channels_list, num_anchors, num_classes, reg_max=16, 
             kernel_size=1
         ))
 
-        # reg_pred - 修复关键错误：与PyTorch版本实际需求对齐
-        # PyTorch版本虽然写的是4*(reg_max+num_anchors)，但实际forward中期望的是4*(reg_max+1)
-        if reg_max > 0:  # DFL启用时
-            reg_out_channels = 4 * (reg_max + 1)  # DFL模式：每个坐标有(reg_max+1)个分布参数
-        else:  # DFL禁用时
-            reg_out_channels = 4 * num_anchors    # 传统模式：每个anchor有4个坐标
-
         head_layers.append(nn.Conv2d(
             in_channels=ch,
-            out_channels=reg_out_channels,
+            out_channels=4 * (reg_max + num_anchors),
             kernel_size=1
         ))
 

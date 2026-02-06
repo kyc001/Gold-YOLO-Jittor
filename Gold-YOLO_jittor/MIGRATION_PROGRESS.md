@@ -213,6 +213,40 @@ Match: True
 
 > 说明：当前验证为核心训练链路 smoke test（随机输入/标注），未在完整数据集上长时间训练。
 
+### 深度对齐复核 (2026-02-06)
+
+本轮对齐以 `Gold-YOLO_pytorch` 作为参考，补齐了“完全迁移”判定中的几个关键差异：
+
+1. **EffiDeHead 初始化逻辑严格对齐 PyTorch**
+   - `cls_preds/reg_preds` 的 `weight` 回归为零初始化；
+   - 保留 `proj_conv` 无梯度投影初始化逻辑。
+
+2. **推理保存路径逻辑严格对齐 PyTorch**
+   - 图片输入保存为图片（不再错误写成 `.jpg.mp4`）；
+   - 视频/流输入保存为 `.mp4`；
+   - 修复 `save_txt` 分支中 `self.save_conf` 未定义风险。
+
+3. **默认配置回归官方基线**
+   - `configs/gold_yolo-n.py` 与 PyTorch 版本重新对齐（默认 `data_path=./data/coco.yaml`）。
+
+4. **参数统计口径统一**
+   - Jittor 中 BN `running_mean/running_var` 也出现在 `named_parameters`，会导致“总参数量”看起来偏大；
+   - 统一采用“**排除 BN running stats**”口径与 PyTorch 对拍。
+
+#### 参数量对拍结果（Gold-YOLO-n, `num_classes=1`）
+
+```
+Jittor train(all):        5,631,505
+Jittor train(excl stats): 5,613,617
+PyTorch train:            5,613,617
+
+Jittor deploy(all):       5,611,409
+Jittor deploy(excl stats):5,604,561
+PyTorch deploy:           5,604,561
+```
+
+结论：在统一统计口径下，训练态与部署态参数量均与 PyTorch 一致。
+
 ---
 
 ## 修复文件清单
@@ -228,12 +262,15 @@ Match: True
 | `yolov6/assigners/assigner_utils.py` | 完全重写工具函数，修复 argmax 返回值 |
 | `yolov6/layers/common.py` | 添加缺失类和融合方法 |
 | `yolov6/models/efficientrep.py` | 添加 P6 类，修复逻辑 |
-| `yolov6/models/effidehead.py` | 修复 stride 参数注册 |
+| `yolov6/models/effidehead.py` | 修复 stride 参数注册，初始化逻辑严格对齐 PyTorch |
 | `yolov6/core/engine.py` | 添加全部缺失方法 |
+| `yolov6/core/inferer.py` | 对齐图片/视频保存逻辑，修复 `save_txt` 分支 |
 | `gold_yolo/transformer.py` | 修复 pool_mode 参数 |
 | `gold_yolo/layers.py` | 修复 norm_cfg 处理 |
 | `gold_yolo/common.py` | 修复层结构 |
-| `configs/gold_yolo-n.py` | 修复 num_repeats |
+| `configs/gold_yolo-n.py` | 回归官方默认配置并保持结构对齐 |
+| `tools/train.py` | 修复默认 `--conf-file` 路径 |
+| `yolov6/utils/jittor_utils.py` | 参数统计改为排除 BN running stats 口径 |
 | `yolov6/utils/figure_iou.py` | 添加 pairwise_bbox_iou |
 
 ---
