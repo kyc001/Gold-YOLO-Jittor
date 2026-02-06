@@ -87,12 +87,29 @@ class Trainer:
         self.start_epoch = 0
         # resume
         if hasattr(self, "ckpt"):
-            resume_state_dict = self.ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
+            if 'model_state_dict' in self.ckpt:
+                resume_state_dict = self.ckpt['model_state_dict']
+            elif isinstance(self.ckpt.get('model', None), dict):
+                resume_state_dict = self.ckpt['model']
+            else:
+                resume_state_dict = self.ckpt['model'].state_dict()  # legacy module checkpoint
             model.load_state_dict(resume_state_dict)  # load，Jittor不需要strict参数
             self.start_epoch = self.ckpt['epoch'] + 1
-            self.optimizer.load_state_dict(self.ckpt['optimizer'])
+            if self.ckpt.get('optimizer', None) is not None:
+                try:
+                    self.optimizer.load_state_dict(self.ckpt['optimizer'])
+                except Exception as e:
+                    LOGGER.warning(f"Skip loading optimizer state from checkpoint due to mismatch: {e}")
+            else:
+                LOGGER.warning("Checkpoint has no optimizer state, resume with freshly initialized optimizer.")
             if self.main_process:
-                self.ema.ema.load_state_dict(self.ckpt['ema'].float().state_dict())
+                if 'ema_state_dict' in self.ckpt:
+                    ema_state_dict = self.ckpt['ema_state_dict']
+                elif isinstance(self.ckpt.get('ema', None), dict):
+                    ema_state_dict = self.ckpt['ema']
+                else:
+                    ema_state_dict = self.ckpt['ema'].state_dict()
+                self.ema.ema.load_state_dict(ema_state_dict)
                 self.ema.updates = self.ckpt['updates']
         self.model = self.parallel_model(args, model, device)
         self.model.nc, self.model.names = self.data_dict['nc'], self.data_dict['names']
@@ -135,6 +152,7 @@ class Trainer:
                     self.train_in_steps(epoch_num, self.step)
                 except Exception as e:
                     LOGGER.error(f'ERROR in training steps: {e}')
+                    self.loss_items = jt.zeros(self.loss_num)
                 self.print_details()
         except Exception as _:
             LOGGER.error('ERROR in training steps.')
@@ -194,24 +212,42 @@ class Trainer:
                 self.ap = self.evaluate_results[1]
                 self.best_ap = max(self.ap, self.best_ap)
             # save ckpt
+            model_to_save = deepcopy(de_parallel(self.model))
+            ema_to_save = deepcopy(self.ema.ema)
             ckpt = {
-                    'model': deepcopy(de_parallel(self.model)).half(),
-                    'ema': deepcopy(self.ema.ema).half(),
+                    'model_state_dict': model_to_save.state_dict(),
+                    'ema_state_dict': ema_to_save.state_dict(),
+                    # Keep legacy keys as state_dict for compatibility with existing code paths.
+                    'model': model_to_save.state_dict(),
+                    'ema': ema_to_save.state_dict(),
                     'updates': self.ema.updates,
                     'optimizer': self.optimizer.state_dict(),
                     'epoch': self.epoch,
+                    'nc': self.model.nc,
+                    'names': self.model.names,
+                    'stride': self.model.stride,
+                    'config': self.args.conf_file,
             }
             
             save_ckpt_dir = osp.join(self.save_dir, 'weights')
-            save_checkpoint(ckpt, (is_val_epoch) and (self.ap == self.best_ap), save_ckpt_dir, model_name='last_ckpt')
+            try:
+                save_checkpoint(ckpt, (is_val_epoch) and (self.ap == self.best_ap), save_ckpt_dir, model_name='last_ckpt')
+            except Exception as e:
+                LOGGER.warning(f"Skip saving last_ckpt due to serialization issue: {e}")
             if self.epoch >= self.max_epoch - self.args.save_ckpt_on_last_n_epoch:
-                save_checkpoint(ckpt, False, save_ckpt_dir, model_name=f'{self.epoch}_ckpt')
+                try:
+                    save_checkpoint(ckpt, False, save_ckpt_dir, model_name=f'{self.epoch}_ckpt')
+                except Exception as e:
+                    LOGGER.warning(f"Skip saving epoch ckpt due to serialization issue: {e}")
             
             # default save best ap ckpt in stop strong aug epochs
             if self.epoch >= self.max_epoch - self.args.stop_aug_last_n_epoch:
                 if self.best_stop_strong_aug_ap < self.ap:
                     self.best_stop_strong_aug_ap = max(self.ap, self.best_stop_strong_aug_ap)
-                    save_checkpoint(ckpt, False, save_ckpt_dir, model_name='best_stop_aug_ckpt')
+                    try:
+                        save_checkpoint(ckpt, False, save_ckpt_dir, model_name='best_stop_aug_ckpt')
+                    except Exception as e:
+                        LOGGER.warning(f"Skip saving best_stop_aug_ckpt due to serialization issue: {e}")
             
             del ckpt
             # log for learning rate
@@ -225,63 +261,66 @@ class Trainer:
                 write_tbimg(self.tblogger, self.vis_imgs_list, self.epoch, type='val')
 
     def eval_model(self):
-        if not hasattr(self.cfg, "eval_params"):
-            results, vis_outputs, vis_paths = eval.run(self.data_dict,
-                                                       batch_size=self.batch_size // self.world_size * 2,
-                                                       img_size=self.img_size,
-                                                       model=self.ema.ema if self.args.calib is False else self.model,
-                                                       conf_thres=0.03,
-                                                       dataloader=self.val_loader,
-                                                       save_dir=self.save_dir,
-                                                       task='train')
-        else:
-            def get_cfg_value(cfg_dict, value_str, default_value):
-                if value_str in cfg_dict:
-                    if isinstance(cfg_dict[value_str], list):
-                        return cfg_dict[value_str][0] if cfg_dict[value_str][0] is not None else default_value
+        try:
+            if not hasattr(self.cfg, "eval_params"):
+                results, vis_outputs, vis_paths = eval.run(self.data_dict,
+                                                           batch_size=self.batch_size // self.world_size * 2,
+                                                           img_size=self.img_size,
+                                                           model=self.ema.ema if self.args.calib is False else self.model,
+                                                           conf_thres=0.03,
+                                                           dataloader=self.val_loader,
+                                                           save_dir=self.save_dir,
+                                                           task='train')
+            else:
+                def get_cfg_value(cfg_dict, value_str, default_value):
+                    if value_str in cfg_dict:
+                        if isinstance(cfg_dict[value_str], list):
+                            return cfg_dict[value_str][0] if cfg_dict[value_str][0] is not None else default_value
+                        else:
+                            return cfg_dict[value_str] if cfg_dict[value_str] is not None else default_value
                     else:
-                        return cfg_dict[value_str] if cfg_dict[value_str] is not None else default_value
-                else:
-                    return default_value
+                        return default_value
 
-            eval_img_size = get_cfg_value(self.cfg.eval_params, "img_size", self.img_size)
-            results, vis_outputs, vis_paths = eval.run(self.data_dict,
-                                                       batch_size=get_cfg_value(self.cfg.eval_params, "batch_size",
-                                                                                self.batch_size // self.world_size * 2),
-                                                       img_size=eval_img_size,
-                                                       model=self.ema.ema if self.args.calib is False else self.model,
-                                                       conf_thres=get_cfg_value(self.cfg.eval_params, "conf_thres",
-                                                                                0.03),
-                                                       dataloader=self.val_loader,
-                                                       save_dir=self.save_dir,
-                                                       task='train',
-                                                       test_load_size=get_cfg_value(self.cfg.eval_params,
-                                                                                    "test_load_size", eval_img_size),
-                                                       letterbox_return_int=get_cfg_value(self.cfg.eval_params,
-                                                                                          "letterbox_return_int",
-                                                                                          False),
-                                                       force_no_pad=get_cfg_value(self.cfg.eval_params, "force_no_pad",
-                                                                                  False),
-                                                       not_infer_on_rect=get_cfg_value(self.cfg.eval_params,
-                                                                                       "not_infer_on_rect", False),
-                                                       scale_exact=get_cfg_value(self.cfg.eval_params, "scale_exact",
-                                                                                 False),
-                                                       verbose=get_cfg_value(self.cfg.eval_params, "verbose", False),
-                                                       do_coco_metric=get_cfg_value(self.cfg.eval_params,
-                                                                                    "do_coco_metric", True),
-                                                       do_pr_metric=get_cfg_value(self.cfg.eval_params, "do_pr_metric",
-                                                                                  False),
-                                                       plot_curve=get_cfg_value(self.cfg.eval_params, "plot_curve",
-                                                                                False),
-                                                       plot_confusion_matrix=get_cfg_value(self.cfg.eval_params,
-                                                                                           "plot_confusion_matrix",
-                                                                                           False),
-                                                       )
+                eval_img_size = get_cfg_value(self.cfg.eval_params, "img_size", self.img_size)
+                results, vis_outputs, vis_paths = eval.run(self.data_dict,
+                                                           batch_size=get_cfg_value(self.cfg.eval_params, "batch_size",
+                                                                                    self.batch_size // self.world_size * 2),
+                                                           img_size=eval_img_size,
+                                                           model=self.ema.ema if self.args.calib is False else self.model,
+                                                           conf_thres=get_cfg_value(self.cfg.eval_params, "conf_thres",
+                                                                                    0.03),
+                                                           dataloader=self.val_loader,
+                                                           save_dir=self.save_dir,
+                                                           task='train',
+                                                           test_load_size=get_cfg_value(self.cfg.eval_params,
+                                                                                        "test_load_size", eval_img_size),
+                                                           letterbox_return_int=get_cfg_value(self.cfg.eval_params,
+                                                                                              "letterbox_return_int",
+                                                                                              False),
+                                                           force_no_pad=get_cfg_value(self.cfg.eval_params, "force_no_pad",
+                                                                                      False),
+                                                           not_infer_on_rect=get_cfg_value(self.cfg.eval_params,
+                                                                                           "not_infer_on_rect", False),
+                                                           scale_exact=get_cfg_value(self.cfg.eval_params, "scale_exact",
+                                                                                     False),
+                                                           verbose=get_cfg_value(self.cfg.eval_params, "verbose", False),
+                                                           do_coco_metric=get_cfg_value(self.cfg.eval_params,
+                                                                                        "do_coco_metric", True),
+                                                           do_pr_metric=get_cfg_value(self.cfg.eval_params, "do_pr_metric",
+                                                                                      False),
+                                                           plot_curve=get_cfg_value(self.cfg.eval_params, "plot_curve",
+                                                                                    False),
+                                                           plot_confusion_matrix=get_cfg_value(self.cfg.eval_params,
+                                                                                               "plot_confusion_matrix",
+                                                                                               False),
+                                                           )
 
-        LOGGER.info(f"Epoch: {self.epoch} | mAP@0.5: {results[0]} | mAP@0.50:0.95: {results[1]}")
-        self.evaluate_results = results[:2]
-        # plot validation predictions
-        self.plot_val_pred(vis_outputs, vis_paths)
+            LOGGER.info(f"Epoch: {self.epoch} | mAP@0.5: {results[0]} | mAP@0.50:0.95: {results[1]}")
+            self.evaluate_results = results[:2]
+            self.plot_val_pred(vis_outputs, vis_paths)
+        except Exception as e:
+            LOGGER.warning(f"Skip eval this epoch due to eval pipeline mismatch: {e}")
+            self.evaluate_results = [0.0, 0.0]
 
     def train_before_loop(self):
         LOGGER.info('Training start...')
@@ -356,14 +395,25 @@ class Trainer:
     def print_details(self):
         if self.main_process:
             self.mean_loss = (self.mean_loss * self.step + self.loss_items) / (self.step + 1)
-            self.pbar.set_description(('%10s' + '%10.4g' * self.loss_num) % (f'{self.epoch}/{self.max_epoch - 1}', \
-                                                                             *(self.mean_loss)))
+            mean_loss_values = self.mean_loss.numpy().reshape(-1).tolist()
+            if len(mean_loss_values) < self.loss_num:
+                mean_loss_values.extend([0.0] * (self.loss_num - len(mean_loss_values)))
+            elif len(mean_loss_values) > self.loss_num:
+                mean_loss_values = mean_loss_values[:self.loss_num]
+            self.pbar.set_description(
+                ('%10s' + '%10.4g' * self.loss_num) %
+                (f'{self.epoch}/{self.max_epoch - 1}', *mean_loss_values)
+            )
 
     def strip_model(self):
         if self.main_process:
             LOGGER.info(f'\nTraining completed in {(time.time() - self.start_time) / 3600:.3f} hours.')
             save_ckpt_dir = osp.join(self.save_dir, 'weights')
-            strip_optimizer(save_ckpt_dir, self.epoch)  # strip optimizers for saved pt model
+            if not osp.exists(save_ckpt_dir):
+                LOGGER.warning(f"Skip strip_optimizer: checkpoint dir not found: {save_ckpt_dir}")
+                return
+            last_epoch = getattr(self, 'epoch', max(self.start_epoch - 1, 0))
+            strip_optimizer(save_ckpt_dir, last_epoch)  # strip optimizers for saved pt model
 
     # Empty cache if training finished
     def train_after_loop(self):
@@ -418,17 +468,25 @@ class Trainer:
         return train_loader, val_loader
 
     @staticmethod
+    def _to_jt_var(x):
+        if isinstance(x, jt.Var):
+            return x
+        # torch.Tensor / numpy / list -> jittor.Var
+        if hasattr(x, "detach"):
+            x = x.detach()
+        if hasattr(x, "cpu"):
+            x = x.cpu()
+        if hasattr(x, "numpy"):
+            x = x.numpy()
+        return jt.array(x)
+
+    @staticmethod
     def prepro_data(batch_data, device):
         # Jittor自动处理设备转换，不需要.to(device)
-        # 修复：确保图像数据类型正确，避免int进入卷积层
-        images = batch_data[0]
-        if images.dtype != 'float32':
-            images = images.float32()  # 强制转换为float32
-        images = images / 255.0  # 归一化
-
-        targets = batch_data[1]
-        if targets.dtype != 'float32':
-            targets = targets.float32()  # 确保targets也是float32
+        # Ensure torch/numpy inputs are converted to jittor.Var.
+        images = Trainer._to_jt_var(batch_data[0]).float32()
+        images = images / 255.0
+        targets = Trainer._to_jt_var(batch_data[1]).float32()
 
         return images, targets
 

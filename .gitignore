@@ -28,6 +28,7 @@ data/
 # 日志和输出文件
 *.log
 loss_curve.npy
+Gold-YOLO_jittor/runs/
 
 # 虚拟环境文件夹
 venv/

@@ -38,19 +38,19 @@ class Inferer:
         # Jittor自动处理CUDA可用性
         self.device = 'cuda' if jt.has_cuda and device != 'cpu' else 'cpu'
         self.model = DetectBackend(weights, device=self.device)
+        self.model.load_model()
         self.stride = self.model.stride
         self.class_names = load_yaml(yaml)['names']
         self.img_size = self.check_img_size(self.img_size, s=self.stride)  # check image size
         self.half = half
         
         # Switch model to deploy status
-        self.model.model = self.model_switch(self.model.model, self.img_size)
+        if self.model.model is not None:
+            self.model.model = self.model_switch(self.model.model, self.img_size)
         
-        # Half precision
-        if self.half and jt.has_cuda:
-            self.model.model.half()
-        else:
-            self.model.model.float()
+        # Half precision on module level is not universally available in jittor.
+        if self.half:
+            LOGGER.warning('Half precision infer is disabled in current jittor module path, use FP32 instead.')
             self.half = False
         
         # 模型预热
@@ -83,6 +83,8 @@ class Inferer:
                 # expand for batch dim
             t1 = time.time()
             pred_results = self.model(img)
+            if isinstance(pred_results, (list, tuple)):
+                pred_results = pred_results[0]
             det = non_max_suppression(pred_results, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)[0]
             t2 = time.time()
             
@@ -206,11 +208,12 @@ class Inferer:
     
     def font_check(self, font='./yolov6/utils/Arial.ttf', size=10):
         # Return a PIL TrueType Font, downloading to CONFIG_DIR if necessary
-        assert osp.exists(font), f'font path not exists: {font}'
+        if not osp.exists(font):
+            return ImageFont.load_default()
         try:
             return ImageFont.truetype(str(font) if font.exists() else font.name, size)
-        except Exception as e:  # download if missing
-            return ImageFont.truetype(str(font), size)
+        except Exception:
+            return ImageFont.load_default()
     
     @staticmethod
     def box_convert(x):

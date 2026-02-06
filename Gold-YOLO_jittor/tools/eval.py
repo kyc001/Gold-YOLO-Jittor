@@ -103,61 +103,61 @@ def run(data,
         task='val',
         device='',
         half=False,
+        model=None,
+        dataloader=None,
         save_dir='runs/val/',
         name='exp',
         test_load_size=640,
         letterbox_return_int=False,
-        scale_exact=False,
         force_no_pad=False,
         not_infer_on_rect=False,
+        scale_exact=False,
+        reproduce_640_eval=False,
+        eval_config_file='./configs/experiment/eval_640_repro.py',
         verbose=False,
         do_coco_metric=True,
         do_pr_metric=False,
         plot_curve=True,
         plot_confusion_matrix=False,
-        config_file='',
-        reproduce_640_eval=False):
-    
-    # Jittor设置
+        config_file=None):
+    """Run evaluation and return metrics plus visualization payload."""
+
+    Evaler.check_task(task)
+    Evaler.check_thres(conf_thres, iou_thres, task)
+
+    if task == 'train':
+        os.makedirs(save_dir, exist_ok=True)
+    else:
+        save_dir = str(increment_name(osp.join(save_dir, name)))
+        os.makedirs(save_dir, exist_ok=True)
+
+    data = Evaler.reload_dataset(data, task) if isinstance(data, str) else data
+
+    # Jittor runtime device setup.
     if jt.has_cuda and device != 'cpu':
         jt.flags.use_cuda = 1
     else:
         jt.flags.use_cuda = 0
-    
-    # 创建保存目录
-    save_dir = str(increment_name(osp.join(save_dir, name)))
-    os.makedirs(save_dir, exist_ok=True)
-    
-    # 创建评估器
+        half = False
+
     evaler = Evaler(data, batch_size, img_size, conf_thres, iou_thres, device, half, save_dir,
-                   test_load_size, letterbox_return_int, force_no_pad, not_infer_on_rect,
-                   scale_exact, verbose, do_coco_metric, do_pr_metric, plot_curve, plot_confusion_matrix)
-    
-    # 初始化模型
-    model = evaler.init_model(None, weights, task)
-    
-    # 初始化数据
-    dataloader = evaler.init_data(None, task)
-    
-    # 预测
-    pred_result, _, _ = evaler.predict_model(model, dataloader, task)
-    
-    # 评估
+                    test_load_size, letterbox_return_int, force_no_pad, not_infer_on_rect,
+                    scale_exact, verbose, do_coco_metric, do_pr_metric, plot_curve, plot_confusion_matrix)
+
+    model = evaler.init_model(model, weights, task, use_cfg=bool(config_file))
+    dataloader = evaler.init_data(dataloader, task)
+
+    model.eval()
+    pred_result, vis_outputs, vis_paths = evaler.predict_model(model, dataloader, task)
     eval_result = evaler.eval_model(pred_result, model, dataloader, task)
-    
-    return eval_result
+
+    return eval_result, vis_outputs, vis_paths
 
 
 def main():
     args = get_args_parser()
 
-    # 过滤掉run函数不接受的参数
-    run_args = vars(args).copy()
-    run_args.pop('eval_config_file', None)  # 移除不支持的参数
-
-    # 运行评估
-    result = run(**run_args)
-
+    result, _, _ = run(**vars(args))
     return result
 
 

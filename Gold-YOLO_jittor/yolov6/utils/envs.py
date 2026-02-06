@@ -66,8 +66,9 @@ def set_random_seed(seed, deterministic=False):
     jt.set_global_seed(seed)
     
     if deterministic:
-        # Jittor的确定性设置
-        jt.flags.use_cuda_random = False
+        # Keep compatibility across jittor versions.
+        if hasattr(jt.flags, 'use_cuda_random'):
+            jt.flags.use_cuda_random = 0
         LOGGER.info(f'Set random seed to {seed} with deterministic mode')
     else:
         LOGGER.info(f'Set random seed to {seed}')

@@ -6,6 +6,7 @@ GOLD-YOLO Jittor版本 - 通用层实现
 import warnings
 import math
 import numpy as np
+import os.path as osp
 from pathlib import Path
 import jittor as jt
 import jittor.nn as nn
@@ -453,13 +454,50 @@ class DetectBackend:
         self.stride = 32
         self.names = {i: f'class{i}' for i in range(80)}  # 默认COCO类别
 
+    def _build_model_from_state_dict(self, state_dict, nc=80):
+        from yolov6.utils.config import Config
+        from yolov6.models.yolo import build_model
+
+        cfg = Config.fromfile('./configs/gold_yolo-n.py')
+        model = build_model(cfg, int(nc), self.device)
+        model.load_state_dict(state_dict)
+        return model
+
     def load_model(self):
         """加载模型"""
-        if self.weights.endswith('.pkl'):
-            # Jittor模型文件
-            self.model = jt.load(self.weights)
-        else:
+        if not self.weights.endswith('.pkl'):
             raise ValueError(f"Unsupported model format: {self.weights}")
+
+        ckpt = jt.load(self.weights)
+        if isinstance(ckpt, nn.Module):
+            self.model = ckpt
+        elif isinstance(ckpt, dict):
+            # Priority: explicit state dict format.
+            if 'model_state_dict' in ckpt:
+                nc = ckpt.get('nc', len(ckpt.get('names', [])) if isinstance(ckpt.get('names', []), list) else 80)
+                self.model = self._build_model_from_state_dict(ckpt['model_state_dict'], nc=nc)
+            elif 'state_dict' in ckpt:
+                nc = ckpt.get('nc', len(ckpt.get('names', [])) if isinstance(ckpt.get('names', []), list) else 80)
+                self.model = self._build_model_from_state_dict(ckpt['state_dict'], nc=nc)
+            elif 'model' in ckpt and isinstance(ckpt['model'], nn.Module):
+                self.model = ckpt['model']
+            elif all(hasattr(v, 'shape') for v in ckpt.values()):
+                # Bare state_dict-like dict
+                self.model = self._build_model_from_state_dict(ckpt, nc=80)
+            else:
+                raise ValueError(f"Unsupported checkpoint content in {self.weights}")
+            if isinstance(ckpt.get('names', None), list):
+                self.names = ckpt['names']
+        else:
+            raise ValueError(f"Unsupported checkpoint type: {type(ckpt)}")
+
+        if hasattr(self.model, 'stride'):
+            stride = self.model.stride
+            self.stride = int(stride.max()) if hasattr(stride, 'max') else int(stride)
+        if hasattr(self.model, 'names'):
+            self.names = self.model.names
+        if hasattr(self.model, 'eval'):
+            self.model.eval()
 
         return self.model
 
