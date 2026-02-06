@@ -176,6 +176,8 @@ class Trainer:
         if self.rank != -1:
             total_loss *= self.world_size
         
+        # 防止loss在assigner/loss内部被提升到float64导致cuDNN反向符号问题
+        total_loss = total_loss.float32()
         # backward - Jittor自动处理梯度缩放
         self.optimizer.backward(total_loss)  # Jittor的反向传播方式
         self.loss_items = loss_items

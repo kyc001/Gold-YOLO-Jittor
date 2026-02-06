@@ -153,12 +153,18 @@ class ComputeLoss:
         if step_num % 10 == 0:
             jt.gc()
 
+        # Jittor在部分assigner路径会返回float64，这会触发cuDNN反向符号问题
+        # 统一在loss入口处转成float32，保证反向图保持float32
+        target_bboxes = target_bboxes.float32()
+        target_scores = target_scores.float32()
+        fg_mask = fg_mask.float32()
+
         # rescale bbox
         target_bboxes /= stride_tensor
 
         # cls loss - 严格对齐PyTorch
         target_labels = jt.where(fg_mask > 0, target_labels, jt.full_like(target_labels, self.num_classes))
-        one_hot_label = jt.nn.one_hot(target_labels.int64(), self.num_classes + 1)[..., :-1]
+        one_hot_label = jt.nn.one_hot(target_labels.int64(), self.num_classes + 1)[..., :-1].float32()
         loss_cls = self.varifocal_loss(pred_scores, target_scores, one_hot_label)
 
         # avoid devide zero error - 严格对齐PyTorch
@@ -192,7 +198,7 @@ class ComputeLoss:
                                 (self.loss_weight['dfl'] * loss_dfl).unsqueeze(0),
                                 (self.loss_weight['class'] * loss_cls).unsqueeze(0))).detach()
 
-        return loss, loss_items
+        return loss.float32(), loss_items.float32()
 
     def preprocess(self, targets, batch_size, scale_tensor):
         # 严格对齐PyTorch版本的preprocess
@@ -228,13 +234,14 @@ class VarifocalLoss(nn.Module):
 
     def execute(self, pred_score, gt_score, label, alpha=0.75, gamma=2.0):
         # 严格对齐PyTorch: weight = alpha * pred_score.pow(gamma) * (1 - label) + gt_score * label
-        weight = alpha * pred_score.pow(gamma) * (1 - label) + gt_score * label
+        pred_score_float = pred_score.float32()
+        gt_score_float = gt_score.float32()
+        label_float = label.float32()
+        weight = alpha * pred_score_float.pow(gamma) * (1 - label_float) + gt_score_float * label_float
 
         # 严格对齐PyTorch: F.binary_cross_entropy(pred_score.float(), gt_score.float(), reduction='none')
         # 注意: PyTorch的BCE期望输入是概率（已经过sigmoid），不是logits
         # pred_score 应该已经是 sigmoid 后的结果（在 effidehead.py 中已应用）
-        pred_score_float = pred_score.float32()
-        gt_score_float = gt_score.float32()
 
         # 手动实现binary_cross_entropy (reduction='none')
         # BCE = -[y * log(p) + (1-y) * log(1-p)]
@@ -245,7 +252,7 @@ class VarifocalLoss(nn.Module):
         # 严格对齐PyTorch: (bce * weight).sum()
         loss = (bce * weight).sum()
 
-        return loss
+        return loss.float32()
 
 
 class BboxLoss(nn.Module):

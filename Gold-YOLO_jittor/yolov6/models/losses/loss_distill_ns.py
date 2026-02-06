@@ -223,12 +223,16 @@ class ComputeLoss:
             print("assigner error, return high loss")
             return jt.ones(1, requires_grad=True) * 1000, jt.ones([4])
 
+        target_bboxes = target_bboxes.float32()
+        target_scores = target_scores.float32()
+        fg_mask = fg_mask.float32()
+
         # rescale bbox
         target_bboxes /= stride_tensor
 
         # cls loss
         target_labels = jt.where(fg_mask > 0, target_labels, jt.full_like(target_labels, self.num_classes))
-        one_hot_label = jt.nn.one_hot(target_labels.astype('int64'), self.num_classes + 1)[..., :-1]
+        one_hot_label = jt.nn.one_hot(target_labels.astype('int64'), self.num_classes + 1)[..., :-1].float32()
         
         # 使用简化的分类损失
         loss_cls = jt.nn.binary_cross_entropy_with_logits(pred_scores.float(), target_scores.float())
@@ -246,7 +250,8 @@ class ComputeLoss:
                self.loss_weight['iou'] * loss_iou + \
                self.loss_weight['dfl'] * loss_dfl
 
-        return loss, jt.stack([loss_iou, loss_dfl, loss_cls]).detach()
+        loss = loss.float32()
+        return loss, jt.stack([loss_iou.float32(), loss_dfl.float32(), loss_cls.float32()]).detach()
 
     def generate_anchors(self, feats, fpn_strides, grid_cell_size=5.0, grid_cell_offset=0.5):
         """Generate anchors from features."""

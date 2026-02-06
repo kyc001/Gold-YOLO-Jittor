@@ -17,6 +17,8 @@ Thumbs.db
 
 # 数据集 - 千万不要上传数据集！
 data/
+!Gold-YOLO_jittor/yolov6/data/
+!Gold-YOLO_jittor/yolov6/data/*.py
 
 # 保存的模型权重
 *.pkl

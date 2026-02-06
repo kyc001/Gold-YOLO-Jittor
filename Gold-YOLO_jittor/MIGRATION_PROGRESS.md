@@ -4,14 +4,14 @@
 
 本文档记录 Gold-YOLO 从 PyTorch 到 Jittor 框架的迁移进度和测试状态。
 
-**当前状态**: ✅ 代码迁移完成，⚠️ 存在 Jittor cuDNN 兼容性问题
+**当前状态**: ✅ 代码迁移完成，✅ 核心训练链路已打通（前向/Loss/反向）
 
 **迁移完成度**:
 - 代码对齐: 100% ✅
 - 参数量对齐: 100% (5,631,550) ✅
 - 前向传播: 100% ✅
 - Loss 计算: 100% ✅
-- 反向传播: ⚠️ Jittor 1.3.10 cuDNN 问题（非代码问题）
+- 反向传播: ✅ 已修复（float32 链路稳定）
 
 ---
 
@@ -136,7 +136,27 @@
     - ✅ 将 numpy array 转换为 tuple: `(int(size[0]), int(size[1]))`
 
 17. **Import 修复** (`yolov6/assigners/__init__.py`)
-    - ✅ 修复 `bbox_overlaps` 导入路径（从 `iou2d_calculator` 而非 `assigner_utils`）
+   - ✅ 修复 `bbox_overlaps` 导入路径（从 `iou2d_calculator` 而非 `assigner_utils`）
+
+### 2026-02-06 第五批修复（反向传播稳定性）
+
+18. **反向传播 dtype 修复** (`yolov6/models/losses/loss.py`)
+   - ✅ 修复 warmup/formal assigner 输出在损失路径中被提升到 `float64` 的问题
+   - ✅ 统一 `target_scores/target_bboxes/fg_mask` 为 `float32`
+   - ✅ 修复 `VarifocalLoss` 输入类型，保证 `pred/gt/label` 全链路 `float32`
+   - ✅ 返回 `loss` 与 `loss_items` 为 `float32`
+
+19. **Assigner 输出类型修复** (`yolov6/assigners/atss_assigner.py`, `yolov6/assigners/tal_assigner.py`)
+   - ✅ ATSS/TAL 返回的 `target_bboxes` 与 `target_scores` 统一为 `float32`
+   - ✅ 避免在反向图中触发 `cudnn_conv_backward_x` 的 `float64/float32` 混合路径
+
+20. **训练引擎保险修复** (`yolov6/core/engine.py`)
+   - ✅ `optimizer.backward()` 前强制 `total_loss.float32()`
+   - ✅ 防止后续分支改动引入 float64 回归
+
+21. **蒸馏/融合损失同步修复** (`yolov6/models/losses/loss_fuseab.py`, `loss_distill.py`, `loss_distill_ns.py`)
+   - ✅ 对 assigner 输出和 one-hot 标签做 `float32` 统一
+   - ✅ 返回损失统一 `float32`
 
 ---
 
@@ -181,17 +201,17 @@ Match: True
 
 ### 训练测试
 
-**状态**: ⚠️ 反向传播存在 Jittor cuDNN 问题
+**状态**: ✅ 反向传播通过（CUDA 路径）
 
-反向传播时 `cudnn_conv_backward_x` 出现 `float64/float32` 混合精度错误。
-所有模型参数、输出、梯度均为 float32，但 Jittor 内部 cuDNN 调用生成了 float64 的算子。
+在 `micromamba run -n jt` 环境下，已验证：
+1. 模型构建 + 前向传播 ✅
+2. Loss 计算（warmup assigner, `epoch_num=0`）✅
+3. Loss 计算（formal assigner, `epoch_num=5`）✅
+4. `optimizer.backward(loss) + optimizer.step() + jt.sync_all()` ✅
 
-**错误**: `undefined symbol: _ZN6jittor11getDataTypeIdEE15cudnnDataType_tv`
+修复后 `loss.dtype` 为 `float32`，不再触发 `cudnn_conv_backward_x` 的 `float64/float32` 符号错误。
 
-**可能的解决方案**:
-1. 升级 Jittor 版本（当前 1.3.10 可能存在 cuDNN 兼容性问题）
-2. 使用 `jt.grad()` 手动计算梯度，避免 `optimizer.backward()`
-3. 清理 Jittor 编译缓存：`rm -rf ~/.cache/jittor/`
+> 说明：当前验证为核心训练链路 smoke test（随机输入/标注），未在完整数据集上长时间训练。
 
 ---
 
@@ -200,6 +220,10 @@ Match: True
 | 文件 | 修复内容 |
 |------|----------|
 | `yolov6/models/losses/loss.py` | 完全重写 Loss 函数 |
+| `yolov6/models/losses/loss_fuseab.py` | 同步修复 dtype 链路 |
+| `yolov6/models/losses/loss_distill.py` | 同步修复 dtype 链路 |
+| `yolov6/models/losses/loss_distill_ns.py` | 同步修复 dtype 链路 |
+| `yolov6/assigners/atss_assigner.py` | 修复输出 dtype 为 float32 |
 | `yolov6/assigners/tal_assigner.py` | 完全重写 Assigner |
 | `yolov6/assigners/assigner_utils.py` | 完全重写工具函数，修复 argmax 返回值 |
 | `yolov6/layers/common.py` | 添加缺失类和融合方法 |

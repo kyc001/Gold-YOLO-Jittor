@@ -91,8 +91,8 @@ class TaskAlignedAssigner(nn.Module):
 
         # concat
         target_labels = jt.concat(target_labels_lst, 0)
-        target_bboxes = jt.concat(target_bboxes_lst, 0)
-        target_scores = jt.concat(target_scores_lst, 0)
+        target_bboxes = jt.concat(target_bboxes_lst, 0).float32()
+        target_scores = jt.concat(target_scores_lst, 0).float32()
         fg_mask = jt.concat(fg_mask_lst, 0)
 
         return target_labels, target_bboxes, target_scores, fg_mask.bool()
@@ -173,6 +173,6 @@ class TaskAlignedAssigner(nn.Module):
         # PyTorch: fg_scores_mask = fg_mask[:, :, None].repeat(1, 1, self.num_classes)
         fg_scores_mask = fg_mask[:, :, None].repeat(1, 1, self.num_classes)
         # PyTorch: target_scores = torch.where(fg_scores_mask > 0, target_scores, torch.full_like(target_scores, 0))
-        target_scores = jt.where(fg_scores_mask > 0, target_scores, jt.zeros_like(target_scores))
+        target_scores = jt.where(fg_scores_mask > 0, target_scores, jt.zeros_like(target_scores)).float32()
 
         return target_labels, target_bboxes, target_scores

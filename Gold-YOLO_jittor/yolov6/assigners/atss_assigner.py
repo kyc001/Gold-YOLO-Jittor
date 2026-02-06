@@ -153,7 +153,7 @@ class ATSSAssigner(nn.Module):
             ious_clamped = jt.clamp(ious, min_v=iou_threshold)
             target_scores *= ious_clamped
 
-        return target_labels.long(), target_bboxes, target_scores, fg_mask.bool()
+        return target_labels.long(), target_bboxes.float32(), target_scores.float32(), fg_mask.bool()
 
     def select_topk_candidates(self,
                                distances,
